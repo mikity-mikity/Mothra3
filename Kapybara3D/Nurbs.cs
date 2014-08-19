@@ -17,6 +17,9 @@ namespace Minilla3D.Elements
             public double ou, ov, u, v;   //scaled coordinate, coordinate on Rhino, local coordinate on an element
             public double[] lo;
             public double[] f;
+            public double[,][] d2;
+            public double[][] d1;
+            public double[] d0;
             public double[][] df;
             public double[][,] ddf;
             public double[] nf;
@@ -119,6 +122,20 @@ namespace Minilla3D.Elements
             tup.C = new double[elemDim, __DIM, nDV];                //Base vectors *coefficient*
             tup.B = new double[elemDim, elemDim, nDV, nDV];          //Metric *coefficient*
             tup.D = new double[elemDim, elemDim, __DIM, nDV];   //Hessian coefficient
+            tup.d0 = new double[nDV];
+            tup.d1 = new double[elemDim][];
+            tup.d2 = new double[elemDim, elemDim][];
+            for (int i = 0; i < elemDim; i++)
+            {
+                tup.d1[i] = new double[nDV];
+            }
+            for (int i = 0; i < elemDim; i++)
+            {
+                for (int j = 0; j < elemDim; j++)
+                {
+                    tup.d2[i, j] = new double[nDV];
+                }
+            }
 
 			//Shape functions  [N] (for global coordinate)
 			for(int j=0;j<elemDim;j++)
@@ -356,6 +373,33 @@ namespace Minilla3D.Elements
                     }
                 }
             }
+            //Create gradient of hessian with computed connection coefficients
+            for (int m = 0; m < elemDim; m++)
+            {
+                for (int n = 0; n < elemDim; n++)
+                {
+                    for (int k = 0; k < nNode; k++)
+                    {
+                        tup.d2[m, n][k] = tup.D[m, n, 2, k * __DIM + 2];
+                        /*for (int i = 0; i < elemDim; i++)
+                        {
+                            gradient[m, n][k] -= Gamma[m, n, i] * C[i, 2, k * 3 + 2];
+                        }*/
+                    }
+                }
+            }
+            for (int m = 0; m < elemDim; m++)
+            {
+                for (int k = 0; k < nNode; k++)
+                {
+                    tup.d1[m][k] = tup.C[m, 2, k * __DIM + 2];
+                }
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                tup.d0[k] = tup.shape[2, k * __DIM + 2];
+            }
+
             /*
             //Create gradient of hessian with computed connection coefficients
             for (int m = 0; m < elemDim; m++)

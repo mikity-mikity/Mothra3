@@ -267,8 +267,9 @@ namespace mikity.ghComponents
                     {
                         leaf.myMasonry.elemList[tup.index].precompute(tup);
                     }
+                    mosek1(leaf);
                 }
-
+                //call mosek
             } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
