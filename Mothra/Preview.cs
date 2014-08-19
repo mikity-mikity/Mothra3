@@ -119,10 +119,6 @@ namespace mikity.ghComponents
                         {
                             args.Display.DrawLines(basis2, System.Drawing.Color.Red, 4);
                         }
-                        if (basis != null)
-                        {
-                            args.Display.DrawLines(basis, System.Drawing.Color.Blue, 2);
-                        }
                         if (c != null)
                         {
                             foreach(var curve in c)

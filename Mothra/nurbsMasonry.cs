@@ -118,8 +118,6 @@ namespace mikity.ghComponents
         List<Point3d> g;
         List<Point3d> dd;
         List<Point3d> dd2;
-        List<Line> basis;
-        List<Line> basis2;
 
         int lastComputed = -1;        
 
@@ -136,8 +134,6 @@ namespace mikity.ghComponents
             g = new List<Point3d>();
             dd = new List<Point3d>();
             dd2 = new List<Point3d>();
-            basis = new List<Line>();
-            basis2 = new List<Line>();
             lastComputed = -1;
         }
         public Mothra3()
@@ -163,130 +159,117 @@ namespace mikity.ghComponents
         }
         void computeF()
         {
-           /* if (lastComputed == 3) {
-                int N=nInnerLoops+nOutterSegments;
-                tuples = new tuple_ex[r];
-                for(int i=0;i<r;i++)
-                {
-                    var tri = triangles[i];
-                    var A = tri.GetVertex(0);
-                    var B = tri.GetVertex(1);
-                    var C = tri.GetVertex(2);
-                    double centerU = (A.X + B.X + C.X) / 3d;
-                    double centerV = (A.Y + B.Y + C.Y) / 3d;
-                    //element index
-                    int uNum = (int)centerU;
-                    int vNum = (int)centerV;
-                    int index = uNum + vNum * nUelem;
-                    //local coordinates
-                    double localU = centerU - uNum;
-                    double localV = centerV - vNum;
+            if (lastComputed == 3) {
+                int N=4;
 
-                    tuples[i] = new tuple_ex(nInnerLoops + nOutterSegments, centerU,centerV,centerU*scaleU+originU, centerV*scaleV+originV,index,localU,localV,tri.Area);
-                    tuples[i].init(flatSurface,scaleU,scaleV);
-                    for(int s=0;s<N;s++)
+                foreach (var leaf in listLeaf)
+                {
+                    leaf.tuples = new tuple_ex[leaf.r];
+                    for (int i = 0; i < leaf.r; i++)
                     {
-                        tuples[i].f[s] = Function[s](centerU, centerV);
-                        dFunction[s](centerU, centerV, tuples[i].df[s]);
-                        ddFunction[s](centerU, centerV, tuples[i].ddf[s]);
-                    }
-                    //computes kernel...
-                    double squaredLength = 0;
-                    for (int s = 0; s < N; s++)
-                    {
-                        squaredLength+=tuples[i].f[s] * tuples[i].f[s];
-                    }
-                    for (int s = 0; s < N; s++)
-                    {
-                        for (int t = 0; t < N; t++)
-                        {
-                            tuples[i].kernel[s, t] = -tuples[i].f[s] * tuples[i].f[t] / squaredLength;
-                            if (s == t) tuples[i].kernel[s, t] += 1d;
-                        }
-                    }
-                    double norm=Math.Sqrt(squaredLength);
-                    //compute normalized base function
-                    for(int s=0;s<N;s++)
-                    {
-                        tuples[i].nf[s]=tuples[i].f[s]/norm;
-                    }
-                    // compute normalized first derivative
-                    for(int v=0;v<2;v++)
-                    {
+                        var tri = leaf.triangles[i];
+                        var A = tri.GetVertex(0);
+                        var B = tri.GetVertex(1);
+                        var C = tri.GetVertex(2);
+                        double centerU = (A.X + B.X + C.X) / 3d;
+                        double centerV = (A.Y + B.Y + C.Y) / 3d;
+                        //element index
+                        int uNum = (int)centerU;
+                        int vNum = (int)centerV;
+                        int index = uNum + vNum * leaf.nUelem;
+                        //local coordinates
+                        double localU = centerU - uNum;
+                        double localV = centerV - vNum;
+
+                        leaf.tuples[i] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, tri.Area);
+                        leaf.tuples[i].init(leaf.srf, leaf.scaleU, leaf.scaleV);
                         for (int s = 0; s < N; s++)
                         {
-                            double val = 0;
+                            leaf.tuples[i].f[s] = leaf.Function[s](centerU, centerV);
+                            leaf.dFunction[s](centerU, centerV, leaf.tuples[i].df[s]);
+                            leaf.ddFunction[s](centerU, centerV, leaf.tuples[i].ddf[s]);
+                        }
+                        //computes kernel...
+                        double squaredLength = 0;
+                        for (int s = 0; s < N; s++)
+                        {
+                            squaredLength += leaf.tuples[i].f[s] * leaf.tuples[i].f[s];
+                        }
+                        for (int s = 0; s < N; s++)
+                        {
                             for (int t = 0; t < N; t++)
                             {
-                                val += tuples[i].df[s][v] * tuples[i].kernel[s, t] / norm;
+                                leaf.tuples[i].kernel[s, t] = -leaf.tuples[i].f[s] * leaf.tuples[i].f[t] / squaredLength;
+                                if (s == t) leaf.tuples[i].kernel[s, t] += 1d;
                             }
-                            tuples[i].ndf[s][v] = val;
                         }
-                    }
-                    //compute normalized second derivative
-                    for (int v = 0; v < 2; v++)
-                    {
-                        for (int w = 0; w < 2; w++)
+                        double norm = Math.Sqrt(squaredLength);
+                        //compute normalized base function
+                        for (int s = 0; s < N; s++)
+                        {
+                            leaf.tuples[i].nf[s] = leaf.tuples[i].f[s] / norm;
+                        }
+                        // compute normalized first derivative
+                        for (int v = 0; v < 2; v++)
                         {
                             for (int s = 0; s < N; s++)
                             {
                                 double val = 0;
                                 for (int t = 0; t < N; t++)
                                 {
-                                    val += tuples[i].ddf[s][v,w] * tuples[i].kernel[s, t] / norm;
-                                    val -= 3 * tuples[i].df[s][v] * tuples[i].df[s][w] * tuples[i].kernel[s, t] / norm / squaredLength;
+                                    val += leaf.tuples[i].df[s][v] * leaf.tuples[i].kernel[s, t] / norm;
                                 }
-                                tuples[i].nddf[s][v,w] = val;
+                                leaf.tuples[i].ndf[s][v] = val;
+                            }
+                        }
+
+                        //compute normalized second derivative
+                        for (int v = 0; v < 2; v++)
+                        {
+                            for (int w = 0; w < 2; w++)
+                            {
+                                for (int s = 0; s < N; s++)
+                                {
+                                    double val = 0;
+                                    for (int t = 0; t < N; t++)
+                                    {
+                                        val += leaf.tuples[i].ddf[s][v, w] * leaf.tuples[i].kernel[s, t] / norm;
+                                        val -= 3 * leaf.tuples[i].df[s][v] * leaf.tuples[i].df[s][w] * leaf.tuples[i].kernel[s, t] / norm / squaredLength;
+                                    }
+                                    leaf.tuples[i].nddf[s][v, w] = val;
+                                }
                             }
                         }
                     }
-                }
-                createNurbsElements(flatSurface);
-                double[,] x;
-                x = new double[nU * nV, 3];
-                Nurbs2x(flatSurface, x);
-                myMasonry.setupNodesFromList(x);
-                myMasonry.computeGlobalCoord();
-                foreach (var e in myMasonry.elemList)
-                {
-                    var P = e.getIntPoint(0);
-                    var Q = e.getIntPoint(1);
-                    var R = e.getIntPoint(2);
-                    var W = e.getIntPoint(3);
-                    dd.Add(new Point3d(P[0], P[1], P[2]));
-                    dd.Add(new Point3d(Q[0], Q[1], Q[2]));
-                    dd.Add(new Point3d(R[0], R[1], R[2]));
-                    dd.Add(new Point3d(W[0], W[1], W[2]));
-                }
-                basis.Clear();
-                foreach (var e in myMasonry.elemList)
-                {
-                    e.precompute();
-                    e.computeBaseVectors();
-                    double[][] gi = new double[2][] { new double[3], new double[3] };
-                    e.getBaseVectors(0, ref gi);
-                    var P = e.getIntPoint(0);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(1, ref gi);
-                    P = e.getIntPoint(1);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(2, ref gi);
-                    P = e.getIntPoint(2);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(3, ref gi);
-                    P = e.getIntPoint(3);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                }
-                foreach (var tup in tuples)
-                {
-                    myMasonry.elemList[tup.index].precompute(tup);
+                    createNurbsElements(leaf);
+                    double[,] x;
+                    x = new double[leaf.nU * leaf.nV, 3];
+                    Nurbs2x(leaf, x);
+                    leaf.myMasonry.setupNodesFromList(x);
+                    leaf.myMasonry.computeGlobalCoord();
+                    foreach (var e in leaf.myMasonry.elemList)
+                    {
+                        var P = e.getIntPoint(0);
+                        var Q = e.getIntPoint(1);
+                        var R = e.getIntPoint(2);
+                        var W = e.getIntPoint(3);
+                        dd.Add(new Point3d(P[0], P[1], P[2]));
+                        dd.Add(new Point3d(Q[0], Q[1], Q[2]));
+                        dd.Add(new Point3d(R[0], R[1], R[2]));
+                        dd.Add(new Point3d(W[0], W[1], W[2]));
+                    }
+                    foreach (var e in leaf.myMasonry.elemList)
+                    {
+                        e.precompute();
+                        e.computeBaseVectors();
+                    }
+                    foreach (var tup in leaf.tuples)
+                    {
+                        leaf.myMasonry.elemList[tup.index].precompute(tup);
+                    }
                 }
 
-            } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}*/
+            } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
         {
