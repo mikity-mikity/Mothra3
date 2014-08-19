@@ -6,34 +6,34 @@ using System.Threading.Tasks;
 
 namespace mikity.ghComponents
 {
-    public partial class Mothra2 : Grasshopper.Kernel.GH_Component
+    public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
-        void Nurbs2x(Rhino.Geometry.NurbsSurface S, double[,] _x)
+        void Nurbs2x(leaf leaf, double[,] _x)
         {
-            for (int i = 0; i < nV; i++)
+            for (int i = 0; i < leaf.nV; i++)
             {
-                for (int j = 0; j < nU; j++)
+                for (int j = 0; j < leaf.nU; j++)
                 {
-                    _x[(i * nU + j), 0] = S.Points.GetControlPoint(j, i).Location.X;
-                    _x[(i * nU + j), 1] = S.Points.GetControlPoint(j, i).Location.Y;
-                    _x[(i * nU + j), 2] = S.Points.GetControlPoint(j, i).Location.Z;
+                    _x[(i * leaf.nU + j), 0] = leaf.srf.Points.GetControlPoint(j, i).Location.X;
+                    _x[(i * leaf.nU + j), 1] = leaf.srf.Points.GetControlPoint(j, i).Location.Y;
+                    _x[(i * leaf.nU + j), 2] = leaf.srf.Points.GetControlPoint(j, i).Location.Z;
                 }
             }
         }
-        void createNurbsElements(Rhino.Geometry.NurbsSurface S)
+        void createNurbsElements(leaf leaf)
         {
             double[] uKnot;
             double[] vKnot;
 
-            int N = nU * nV;
-            int uDim = S.OrderU;
-            int vDim = S.OrderV;
-            int uDdim = S.OrderU - 1;
-            int vDdim = S.OrderV - 1;
+            int N = leaf.nU * leaf.nV;
+            int uDim = leaf.srf.OrderU;
+            int vDim = leaf.srf.OrderV;
+            int uDdim = leaf.srf.OrderU - 1;
+            int vDdim = leaf.srf.OrderV - 1;
 
 
-            uKnot = new double[nU - uDdim + 1 + uDdim * 2];
-            vKnot = new double[nV - vDdim + 1 + vDdim * 2];
+            uKnot = new double[leaf.nU - uDdim + 1 + uDdim * 2];
+            vKnot = new double[leaf.nV - vDdim + 1 + vDdim * 2];
             for (int i = 0; i < uDdim; i++)
             {
                 uKnot[i] = 0;
@@ -42,33 +42,33 @@ namespace mikity.ghComponents
             {
                 vKnot[i] = 0;
             }
-            for (int i = 0; i < nU - uDdim + 1; i++)
+            for (int i = 0; i < leaf.nU - uDdim + 1; i++)
             {
                 uKnot[i + uDdim] = i;
             }
-            for (int i = 0; i < nV - vDdim + 1; i++)
+            for (int i = 0; i < leaf.nV - vDdim + 1; i++)
             {
                 vKnot[i + vDdim] = i;
             }
             for (int i = 0; i < uDdim; i++)
             {
-                uKnot[i + nU + 1] = nU - uDdim;
+                uKnot[i + leaf.nU + 1] = leaf.nU - uDdim;
             }
             for (int i = 0; i < vDdim; i++)
             {
-                vKnot[i + nV + 1] = nV - vDdim;
+                vKnot[i + leaf.nV + 1] = leaf.nV - vDdim;
             }
-            myMasonry = new Minilla3D.Objects.masonry();
-            for (int j = 1; j < nV - vDdim + 1; j++)
+            leaf.myMasonry = new Minilla3D.Objects.masonry();
+            for (int j = 1; j < leaf.nV - vDdim + 1; j++)
             {
-                for (int i = 1; i < nU - uDdim + 1; i++)
+                for (int i = 1; i < leaf.nU - uDdim + 1; i++)
                 {
                     int[] index = new int[uDim * vDim];
                     for (int k = 0; k < vDim; k++)
                     {
                         for (int l = 0; l < uDim; l++)
                         {
-                            index[k * uDim + l] = (j - 1 + k) * nU + i - 1 + l;
+                            index[k * uDim + l] = (j - 1 + k) * leaf.nU + i - 1 + l;
                         }
                     }
                     Minilla3D.Elements.nurbsElement.border _border = Minilla3D.Elements.nurbsElement.border.None;
@@ -131,7 +131,7 @@ namespace mikity.ghComponents
                             v.rightEdge.Add(c);
                         }
                     }*/
-                    myMasonry.elemList.Add(new Minilla3D.Elements.nurbsElement(uDim, vDim, index, i, j, uKnot, vKnot, _border));
+                    leaf.myMasonry.elemList.Add(new Minilla3D.Elements.nurbsElement(uDim, vDim, index, i, j, uKnot, vKnot, _border));
                     /*switch (_border)
                     {
                         case nurbsElement.border.Left | nurbsElement.border.Top | nurbsElement.border.Right:

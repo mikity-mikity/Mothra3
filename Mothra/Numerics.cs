@@ -7,13 +7,8 @@ using ShoNS.Array;
 using Rhino.Geometry;
 namespace mikity.ghComponents
 {
-    public partial class Mothra2 : Grasshopper.Kernel.GH_Component
+    public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
-        private DoubleArray[] baseFunction;
-        private DoubleArray[] coeff;
-        Func<double, double, double>[] Function;
-        Action<double, double, double[]>[] dFunction;
-        Action<double, double, double[,]>[] ddFunction;
         private static double epsilon = 0.2;
         Func<double, double, double, double, double> F = (x1, x2, y1, y2) => { return Math.Sqrt(1 + epsilon * (((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)))); };
         Action<double, double, double, double, double[]> dF = (x1, x2, y1, y2, grad) =>
@@ -30,21 +25,17 @@ namespace mikity.ghComponents
         };
         public void computeBaseFunction(int lastComputed)
         {
-            if (lastComputed >= nOutterSegments)
-            {
-                computeBaseFunction2(lastComputed);
-            }
-            else
+            if (lastComputed <4)
             {
                 computeBaseFunction1(lastComputed);
             }
         }
 
-        private void computeBaseFunctionCommon(int lastComputed,DoubleArray origX)
+        private void computeBaseFunctionCommon(int lastComputed, DoubleArray origX, leaf leaf)
         {
-            var M = (shiftArray.T.Multiply(Laplacian) as SparseDoubleArray) * shiftArray as SparseDoubleArray;
-            int T1 = n - fixedPoints.Count;
-            int T2 = n;
+            var M = (leaf.shiftArray.T.Multiply(leaf.Laplacian) as SparseDoubleArray) * leaf.shiftArray as SparseDoubleArray;
+            int T1 = leaf.n - leaf.fixedPoints.Count;
+            int T2 = leaf.n;
             var slice1 = new SparseDoubleArray(T1, T2);
             var slice2 = new SparseDoubleArray(T2, T2 - T1);
             for (int i = 0; i < T1; i++)
@@ -58,11 +49,11 @@ namespace mikity.ghComponents
             var DIB = (slice1.Multiply(M) as SparseDoubleArray).Multiply(slice2) as SparseDoubleArray;
             var DII = (slice1.Multiply(M) as SparseDoubleArray).Multiply(slice1.T) as SparseDoubleArray;
             var solver = new SparseLU(DII);
-            origX = shiftArray.T * origX;
+            origX = leaf.shiftArray.T * origX;
             var fixX = origX.GetSlice(T1, T2 - 1, 0, 0);
             var B = -DIB * fixX;
             var dx = solver.Solve(B);
-            var ret = DoubleArray.Zeros(n, 1);
+            var ret = DoubleArray.Zeros(leaf.n, 1);
             for (int i = 0; i < T1; i++)
             {
                 ret[i, 0] = dx[i, 0];
@@ -71,120 +62,114 @@ namespace mikity.ghComponents
             {
                 ret[i, 0] = fixX[i - T1, 0];
             }
-            if (lastComputed < baseFunction.Length)
+            if (lastComputed < leaf.baseFunction.Length)
             {
-                baseFunction[lastComputed] = shiftArray * ret;
+                leaf.baseFunction[lastComputed] = leaf.shiftArray * ret;
             }
             //vertices...x,y
             //baseFunction[]...z
-            var MM = DoubleArray.Zeros(n, n);
-            for (int i = 0; i < n; i++)
+            var MM = DoubleArray.Zeros(leaf.n, leaf.n);
+            for (int i = 0; i < leaf.n; i++)
             {
-                for (int j = 0; j < n; j++)
+                for (int j = 0; j < leaf.n; j++)
                 {
-                    MM[i, j] = F(vertices[i].X, vertices[j].X, vertices[i].Y, vertices[j].Y);
+                    MM[i, j] = F(leaf.vertices[i].X, leaf.vertices[j].X, leaf.vertices[i].Y, leaf.vertices[j].Y);
                 }
             }
-            var V = DoubleArray.Zeros(n, 1);
-            for (int i = 0; i < n; i++)
+            var V = DoubleArray.Zeros(leaf.n, 1);
+            for (int i = 0; i < leaf.n; i++)
             {
-                V[i, 0] = baseFunction[lastComputed][i, 0];
+                V[i, 0] = leaf.baseFunction[lastComputed][i, 0];
             }
             //var solver2 = new LU(MM);
             var solver2 = new SVD(MM);
-            coeff[lastComputed] = solver2.Solve(V);
-            Function[lastComputed] = (x, y) =>
+            leaf.coeff[lastComputed] = solver2.Solve(V);
+            leaf.Function[lastComputed] = (x, y) =>
             {
                 double val = 0;
-                for (int j = 0; j < n; j++)
+                for (int j = 0; j < leaf.n; j++)
                 {
-                    val += coeff[lastComputed][j, 0] * F(x, vertices[j].X, y, vertices[j].Y);
+                    val += leaf.coeff[lastComputed][j, 0] * F(x, leaf.vertices[j].X, y, leaf.vertices[j].Y);
                 }
                 return val;
             };
-            dFunction[lastComputed] = (x, y, val) =>
+            leaf.dFunction[lastComputed] = (x, y, val) =>
             {
                 val[0] = 0;
                 val[1] = 0;
                 double[] r = new double[2] { 0, 0 };
-                for (int j = 0; j < n; j++)
+                for (int j = 0; j < leaf.n; j++)
                 {
-                    dF(x, vertices[j].X, y, vertices[j].Y, r);
-                    val[0] += coeff[lastComputed][j, 0] * r[0];
-                    val[1] += coeff[lastComputed][j, 0] * r[1];
+                    dF(x, leaf.vertices[j].X, y, leaf.vertices[j].Y, r);
+                    val[0] += leaf.coeff[lastComputed][j, 0] * r[0];
+                    val[1] += leaf.coeff[lastComputed][j, 0] * r[1];
                 }
-
             };
-            ddFunction[lastComputed] = (x, y, val) =>
+            leaf.ddFunction[lastComputed] = (x, y, val) =>
             {
                 val[0, 0] = 0;
                 val[0, 1] = 0;
                 val[1, 0] = 0;
                 val[1, 1] = 0;
-                double[,] r = new double[2, 2] { {0, 0}, {0, 0} };
-                for (int j = 0; j < n; j++)
+                double[,] r = new double[2, 2] { { 0, 0 }, { 0, 0 } };
+                for (int j = 0; j < leaf.n; j++)
                 {
-                    ddF(x, vertices[j].X, y, vertices[j].Y, r);
-                    val[0, 0] += coeff[lastComputed][j, 0] * r[0, 0];
-                    val[0, 1] += coeff[lastComputed][j, 0] * r[0, 1];
-                    val[1, 0] += coeff[lastComputed][j, 0] * r[1, 0];
-                    val[1, 1] += coeff[lastComputed][j, 0] * r[1, 1];
+                    ddF(x, leaf.vertices[j].X, y, leaf.vertices[j].Y, r);
+                    val[0, 0] += leaf.coeff[lastComputed][j, 0] * r[0, 0];
+                    val[0, 1] += leaf.coeff[lastComputed][j, 0] * r[0, 1];
+                    val[1, 0] += leaf.coeff[lastComputed][j, 0] * r[1, 0];
+                    val[1, 1] += leaf.coeff[lastComputed][j, 0] * r[1, 1];
                 }
-
             };
-            if (lastComputed == 0) resultToPreview(0);
-        }
-        private void computeBaseFunction2(int lastComputed)
-        {
-            DoubleArray origX = new DoubleArray(n, 1);
-            for (int i = 0; i < n; i++)
-            {
-                origX[i, 0] = 0;
-            }
-            var b = bbIn[lastComputed-nOutterSegments];
-            for (int i = 0; i < b.Count; i++)
-            {
-                origX[b[i].P0, 0] = 5d;
-            }
-            computeBaseFunctionCommon(lastComputed, origX);
-
         }
         private void computeBaseFunction1(int lastComputed)
         {
-            DoubleArray origX = new DoubleArray(n, 1);
-            for (int i = 0; i < n; i++)
+            foreach (var leaf in listLeaf)
             {
-                origX[i, 0] = 0;
-            }
-            var b = bbOut[lastComputed];
-            for (int i = 0; i < b.Count; i++)
-            {
-                double y = Math.Pow((i - ((double)b.Count / 2d)) / ((double)b.Count / 2d), 2) - 1d;
-                origX[b[i].P0, 0] = -3d * y;
-                if (i == b.Count - 1)
+                DoubleArray origX = new DoubleArray(leaf.n, 1);
+                for (int i = 0; i < leaf.n; i++)
                 {
-                    y = Math.Pow(((i + 1d) - ((double)b.Count / 2d)) / ((double)b.Count / 2d), 2) - 1d;
-                    origX[b[i].P1, 0] = -3d * y;
+                    origX[i, 0] = 0;
                 }
+                var b = leaf.bbOut[lastComputed];
+                var T0 = leaf.vertices[b[0].P0];
+                var T1 = leaf.vertices[b.Last().P1];
+                double Length = Math.Sqrt((T1.X - T0.X) * (T1.X - T0.X) + (T1.Y - T0.Y) * (T1.Y - T0.Y));
+                for (int i = 0; i < b.Count; i++)
+                {
+                    var TS = leaf.vertices[b[i].P0];
+                    double L = Math.Sqrt((TS.X - T0.X) * (TS.X - T0.X) + (TS.Y - T0.Y) * (TS.Y - T0.Y));
+                    double y = Math.Pow((Length/2d-L)/(Length/2d), 2) - 1d;
+                    origX[b[i].P0, 0] = -3d * y;
+                    if (i == b.Count - 1)
+                    {
+                        y = Math.Pow(((i + 1d) - ((double)b.Count / 2d)) / ((double)b.Count / 2d), 2) - 1d;
+                        origX[b[i].P1, 0] = -3d * y;
+                    }
+                }
+                computeBaseFunctionCommon(lastComputed, origX,leaf);
             }
-            computeBaseFunctionCommon(lastComputed, origX);
+            if (lastComputed == 0) resultToPreview(0);
         }
         public void resultToPreview(int num)
         {
-            result = new List<Rhino.Geometry.Line>();
-            if (baseFunction[num] == null) { result = null; return; }
-            var xx = baseFunction[num];
-            foreach (var edge in edges)
+            a = new List<Point3d>();
+            foreach (var leaf in listLeaf)
             {
-                Rhino.Geometry.Point3d P = new Rhino.Geometry.Point3d(vertices[edge.P0].X, vertices[edge.P0].Y, xx[edge.P0]);
-                Rhino.Geometry.Point3d Q = new Rhino.Geometry.Point3d(vertices[edge.P1].X, vertices[edge.P1].Y, xx[edge.P1]);
-                result.Add(new Rhino.Geometry.Line(P, Q));
-            }
-            for (int i = 0; i < a.Count; i++)
-            {
-                Point3d P = new Point3d(a[i].X, a[i].Y, Function[num](a2[i].X, a2[i].Y));
-                a.RemoveAt(i);
-                a.Insert(i, P);
+                if (leaf.baseFunction[num] == null) { return; }
+                var xx = leaf.baseFunction[num];
+                leaf.result = new List<Line>();
+                foreach (var edge in leaf.edges)
+                {
+                    Rhino.Geometry.Point3d P = new Rhino.Geometry.Point3d(leaf.vertices[edge.P0].X, leaf.vertices[edge.P0].Y, xx[edge.P0]);
+                    Rhino.Geometry.Point3d Q = new Rhino.Geometry.Point3d(leaf.vertices[edge.P1].X, leaf.vertices[edge.P1].Y, xx[edge.P1]);
+                    leaf.result.Add(new Rhino.Geometry.Line(P, Q));
+                }
+                foreach (var V in leaf.vertices)
+                {
+                    var P = leaf.srf.PointAt(V.X * leaf.scaleU + leaf.originU, V.Y * leaf.scaleV + leaf.originV);
+                    a.Add(new Point3d(P.X,P.Y,leaf.Function[num](V.X,V.Y)));
+                }
             }
         }
         public SparseDoubleArray computeLaplacian(int[,] lines, int nP)

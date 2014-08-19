@@ -16,8 +16,38 @@ using ShoNS.Array;
 
 namespace mikity.ghComponents
 {
-    public partial class Mothra2 : Grasshopper.Kernel.GH_Component
+    public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public class leaf
+        {
+            public List<Mesher.Geometry.Edge>[] bbOut;
+            public List<Line>[] triEdges;
+            public List<Line> result;
+            public Minilla3D.Objects.masonry myMasonry;
+
+            public NurbsSurface srf;
+            public Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
+            public SparseDoubleArray Laplacian;
+            public SparseDoubleArray shiftArray;
+            public int n, m, r;  //Number of vertices, edges and triangles.
+            public int nU, nV;
+            public int uDim, vDim;
+            public int uDdim, vDdim;
+            public int nUelem;
+            public int nVelem;
+            public double scaleU, scaleV, originU, originV;
+            public Interval domU, domV;
+            public Mesher.Data.Vertex[] vertices;
+            public Mesher.Geometry.Edge[] edges;
+            public Mesher.Data.Triangle[] triangles;
+            public tuple_ex[] tuples;
+            public List<int> fixedPoints;
+            public DoubleArray[] baseFunction; //right-hand side
+            public DoubleArray[] coeff;        // coefficients
+            public Func<double, double, double>[] Function;
+            public Action<double, double, double[]>[] dFunction;
+            public Action<double, double, double[,]>[] ddFunction;
+        }
         public class tuple_ex:Minilla3D.Elements.nurbsElement.tuple
         {
             public tuple_ex(int _N, double _ou, double _ov, double _u, double _v, int _index, double _loU, double _loV, double _area):base(_N, _ou, _ov, _u,_v,  _index, _loU, _loV, _area)
@@ -75,7 +105,8 @@ namespace mikity.ghComponents
             }
         }
         ControlBox myControlBox = new ControlBox();
-        NurbsSurface flatSurface;
+        List<Surface> _listSrf;
+        List<leaf> listLeaf;
         List<Point3d> a;
         List<Point3d> a2;
         List<Point3d> b;
@@ -89,32 +120,9 @@ namespace mikity.ghComponents
         List<Point3d> dd2;
         List<Line> basis;
         List<Line> basis2;
-        List<Line>[] boundaries;
-        List<Line>[] holes;
-        List<Line> result;
-        int nOutterSegments = 0;
-        int nInnerLoops = 0;
-        Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
-        int lastComputed = -1;
 
-        SparseDoubleArray Laplacian;
-        SparseDoubleArray shiftArray;
-        List<Mesher.Geometry.Edge>[] bbOut;
-        List<Mesher.Geometry.Edge>[] bbIn;
-        int n, m, r;  //Number of vertices, edges and triangles.
-        int nU, nV;
-        int nUelem;
-        int nVelem;
-        double scaleU, scaleV,originU,originV;
-        Interval domU, domV;
-        
-        Minilla3D.Objects.masonry myMasonry;
+        int lastComputed = -1;        
 
-        Mesher.Data.Vertex[] vertices;
-        Mesher.Geometry.Edge[] edges;
-        Mesher.Data.Triangle[] triangles;
-        tuple_ex[] tuples;
-        List<int> fixedPoints;
         private void init()
         {
             a = new List<Point3d>();
@@ -132,8 +140,8 @@ namespace mikity.ghComponents
             basis2 = new List<Line>();
             lastComputed = -1;
         }
-        public Mothra2()
-            : base("Mothra2", "Mothra2", "Mothra2", "Kapybara3D", "Computation")
+        public Mothra3()
+            : base("Mothra3", "Mothra3", "Mothra3", "Kapybara3D", "Computation")
         {
         }
         public override Guid ComponentGuid
@@ -142,7 +150,7 @@ namespace mikity.ghComponents
         }
         protected override void RegisterInputParams(Grasshopper.Kernel.GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddBrepParameter("TrimmedSurface", "trmSrf", "a trimmed surface, outer trim and holes are supported", Grasshopper.Kernel.GH_ParamAccess.item);
+            pManager.AddSurfaceParameter("listSurface", "lstSrf", "list of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
         }
         protected override void RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager pManager)
         {
@@ -155,7 +163,7 @@ namespace mikity.ghComponents
         }
         void computeF()
         {
-            if (lastComputed == nInnerLoops + nOutterSegments - 1) {
+           /* if (lastComputed == 3) {
                 int N=nInnerLoops+nOutterSegments;
                 tuples = new tuple_ex[r];
                 for(int i=0;i<r;i++)
@@ -278,124 +286,226 @@ namespace mikity.ghComponents
                     myMasonry.elemList[tup.index].precompute(tup);
                 }
 
-                /*for (int i = 0; i < 10; i++)
-                {
-                    System.Windows.Forms.MessageBox.Show((tuples[i].Gammaijk[0, 1, 0]).ToString("g"));
-                    System.Windows.Forms.MessageBox.Show((tuples[i].Gammaijk2[0, 1, 0]).ToString("g"));
-                }*/
-                /*
-                List<tuple> anotherTuples = new List<tuple>();
-                dd2.Clear();
-                for (int j = 0; j < nVelem; j++)
-                {
-                    for (int i = 0; i < nUelem; i++)
-                    {
-                        Point3d P;
-                        double u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.3);
-                        double v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.3);
-                        anotherTuples.Add(new tuple(nInnerLoops + nOutterSegments, u, v, 0.25));
-
-                        P=flatSurface.PointAt(u, v);
-                        dd2.Add(P);
-                        u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.7);
-                        v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.3);
-                        anotherTuples.Add(new tuple(nInnerLoops + nOutterSegments, u, v, 0.25));
-                        P = flatSurface.PointAt(u, v);
-                        dd2.Add(P);
-                        u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.3);
-                        v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.7);
-                        anotherTuples.Add(new tuple(nInnerLoops + nOutterSegments, u, v, 0.25));
-                        P = flatSurface.PointAt(u, v);
-                        dd2.Add(P);
-                        u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.7);
-                        v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.7);
-                        anotherTuples.Add(new tuple(nInnerLoops + nOutterSegments, u, v, 0.25));
-                        P = flatSurface.PointAt(u, v);
-                        dd2.Add(P);
-                    }
-                }
-                basis2.Clear();
-                foreach (var v in anotherTuples)
-                {
-                    v.init(flatSurface, scaleU, scaleV);
-                    basis2.Add(new Line(new Point3d(v.x, v.y, 0), new Point3d(v.x + v.gi[0][0], v.y + v.gi[0][1], 0)));
-                    basis2.Add(new Line(new Point3d(v.x, v.y, 0), new Point3d(v.x + v.gi[1][0], v.y + v.gi[1][1], 0)));
-                }
-                List<double[, ,]> gijk = new List<double[, ,]>();
-                basis.Clear();
-                foreach (var e in myMasonry.elemList)
-                {
-                    e.precompute();
-                    e.computeBaseVectors();
-                    double[][] gi=new double[2][]{new double[3],new double[3]};
-                    e.getBaseVectors(0, ref gi);
-                    var P=e.getIntPoint(0);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(1, ref gi);
-                    P = e.getIntPoint(1);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(2, ref gi);
-                    P = e.getIntPoint(2);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    e.getBaseVectors(3, ref gi);
-                    P = e.getIntPoint(3);
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[0][0], P[1] + gi[0][1], 0)));
-                    basis.Add(new Line(new Point3d(P[0], P[1], 0), new Point3d(P[0] + gi[1][0], P[1] + gi[1][1], 0)));
-                    double[, ,] g = new double[2, 2, 2];
-                    e.getConnectionCoeff(0, ref g);
-                    gijk.Add(g);
-                    g = new double[2, 2, 2];
-                    e.getConnectionCoeff(1, ref g);
-                    gijk.Add(g);
-                    g = new double[2, 2, 2];
-                    e.getConnectionCoeff(2, ref g);
-                    gijk.Add(g);
-                    g = new double[2, 2, 2];
-                    e.getConnectionCoeff(3, ref g);
-                    gijk.Add(g);
-                    g = new double[2, 2, 2];
-                }
-                //Check Gammaijk...
-                if (anotherTuples.Count == gijk.Count)
-                {
-                    System.Windows.Forms.MessageBox.Show("OK");
-                    for (int i = 0; i < 10; i++)
-                    {
-                        System.Windows.Forms.MessageBox.Show((anotherTuples[i].Gammaijk[0, 1, 0]).ToString("g"));
-                        System.Windows.Forms.MessageBox.Show((gijk[i][0, 1, 0]).ToString("g"));
-                    }
-                }
-                else
-                {
-                    System.Windows.Forms.MessageBox.Show("Bad");
-                }*/
-            } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
+            } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}*/
         }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
         {
-            Brep brep = null;
             init();
-            if (!DA.GetData(0, ref brep)) { return; }
-            var face=brep.Faces[0];
-            flatSurface = brep.Faces[0].ToNurbsSurface();
-            nU = flatSurface.Points.CountU;
-            nV = flatSurface.Points.CountV;
-            domU = face.Domain(0);
-            domV=face.Domain(1);
-            int uDim = flatSurface.OrderU;
-            int vDim = flatSurface.OrderV;
-            int uDdim = flatSurface.OrderU - 1;
-            int vDdim = flatSurface.OrderV - 1;
-            nUelem=nU - uDdim;
-            nVelem=nV - vDdim;
-            scaleU = (domU.T1 - domU.T0) / nUelem;
-            scaleV = (domV.T1 - domV.T0) / nVelem;
-            originU = domU.T0;
-            originV = domV.T0;
-            for (int i = 0; i < nUelem; i++)
+            _listSrf = new List<Surface>();
+            if (!DA.GetDataList(0, _listSrf)) { return; }
+            listLeaf = new List<leaf>();
+            myControlBox.setNumF(4);
+            myControlBox.setFunctionToCompute(() =>
+            {
+                if (lastComputed == 3) return;
+                lastComputed++;
+                computeBaseFunction(lastComputed);
+                this.ExpirePreview(true);
+                myControlBox.EnableRadio(lastComputed, (i) => { resultToPreview(i); this.ExpirePreview(true); });
+            }
+                );
+
+            foreach (var srf in _listSrf)
+            {
+                var leaf=new leaf();
+                listLeaf.Add(leaf);
+                leaf.srf = srf as NurbsSurface;
+                leaf.nU = leaf.srf.Points.CountU;
+                leaf.nV = leaf.srf.Points.CountV;
+                leaf.domU = leaf.srf.Domain(0);
+                leaf.domV = leaf.srf.Domain(1);
+                leaf.uDim = leaf.srf.OrderU;
+                leaf.vDim = leaf.srf.OrderV;
+                leaf.uDdim = leaf.srf.OrderU - 1;
+                leaf.vDdim = leaf.srf.OrderV - 1;
+                leaf.nUelem = leaf.nU - leaf.uDdim;
+                leaf.nVelem = leaf.nV - leaf.vDdim;
+                leaf.scaleU = (leaf.domU.T1 - leaf.domU.T0) / leaf.nUelem;
+                leaf.scaleV = (leaf.domV.T1 - leaf.domV.T0) / leaf.nVelem;
+                leaf.originU = leaf.domU.T0;
+                leaf.originV = leaf.domV.T0;
+                leaf.baseFunction = new DoubleArray[4];
+                leaf.coeff = new DoubleArray[4];
+                leaf.Function = new Func<double, double, double>[4];
+                leaf.dFunction = new Action<double, double, double[]>[4];
+                leaf.ddFunction = new Action<double, double, double[,]>[4];
+                InputGeometry input = new InputGeometry();  //temporary
+                int nNode = 11;
+                int _N = 0;
+                var domainU = leaf.srf.Domain(0);
+                var domainV = leaf.srf.Domain(1);
+                //(0,0)->(1,0)
+                //var curve = leaf.srf.IsoCurve(0, domainV.T0);
+                double u=0, v=0;
+                for (int i = 0; i < nNode-1; i++)
+                {
+                    u = domainU.T0 + (domainU.T1 - domainU.T0) / (nNode - 1) * i;
+                    v = domainV.T0;
+                    input.AddPoint(u / leaf.scaleU - leaf.originU / leaf.scaleU, v / leaf.scaleV - leaf.originV / leaf.scaleV);
+                    _N++;
+                    input.AddSegment(_N - 1, _N, 1);
+                }
+                //(1,0)->(1,1)
+                //curve = leaf.srf.IsoCurve(1, domainU.T1);
+                for (int i = 0; i < nNode-1; i++)
+                {
+                    u = domainU.T1;
+                    v = domainV.T0 + (domainV.T1 - domainV.T0) / (nNode - 1) * i;
+                    input.AddPoint(u / leaf.scaleU - leaf.originU / leaf.scaleU, v / leaf.scaleV - leaf.originV / leaf.scaleV);
+                    _N++;
+                    input.AddSegment(_N - 1, _N, 2);
+                }
+                //(1,1)->(0,1)
+                //curve = leaf.srf.IsoCurve(0, domainV.T1);
+                for (int i = 0; i < nNode-1; i++)
+                {
+                    u = domainU.T1 + (domainU.T0 - domainU.T1) / (nNode - 1) * i;
+                    v = domainV.T1;
+                    input.AddPoint(u / leaf.scaleU - leaf.originU / leaf.scaleU, v / leaf.scaleV - leaf.originV / leaf.scaleV);
+                    _N++;
+                    input.AddSegment(_N - 1, _N, 3);
+                }
+                //(0,1)->(0,0)
+                //curve = leaf.srf.IsoCurve(1, domainU.T0);
+                for (int i = 0; i < nNode-1; i++)
+                {
+                    u = domainU.T0;
+                    v = domainV.T1 + (domainV.T0 - domainV.T1) / (nNode - 1) * i;
+                    input.AddPoint(u / leaf.scaleU - leaf.originU / leaf.scaleU, v / leaf.scaleV - leaf.originV / leaf.scaleV);
+                    _N++;
+                    if (i == nNode - 2)
+                    {
+                        input.AddSegment(_N - 1, 0, 4);
+                    }
+                    else
+                    {
+                        input.AddSegment(_N - 1, _N, 4);
+                    }
+                }
+                foreach (var l in input.Segments)
+                {
+                    var P = input.Points.ElementAt(l.P0);
+                    var Q = input.Points.ElementAt(l.P1);
+                    f.Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
+                }
+                Mesher.Mesh mesh = new Mesher.Mesh();
+                mesh.Behavior.UseBoundaryMarkers = true;
+                mesh.Behavior.MaxArea = Math.Pow(Math.Min(input.Bounds.Width, input.Bounds.Height) / 10d, 2);
+                mesh.Behavior.Convex = false;
+                mesh.Behavior.Algorithm = TriangulationAlgorithm.SweepLine;
+                mesh.Behavior.ConformingDelaunay = true;
+                mesh.Triangulate(input);
+
+                mesh.Behavior.Quality = true;
+                mesh.Behavior.MinAngle = 30;
+                mesh.Behavior.MaxAngle = 100;
+
+                mesh.Refine();
+
+                mesh.Smooth();
+                mesh.Smooth();
+                foreach (var P in mesh.Vertices)
+                {
+                    if (P.Attributes == null)
+                    {
+                        leaf.gmesh.Vertices.Add(new Point3d(P.X, P.Y, 0));
+                    }
+                    else
+                    {
+                        leaf.gmesh.Vertices.Add(new Point3d(P.X, P.Y, P.Attributes[0]));
+                    }
+                }
+                foreach (var tri in mesh.Triangles)
+                {
+                    leaf.gmesh.Faces.AddFace(tri.P0, tri.P1, tri.P2);
+                }
+
+                leaf.bbOut = new List<Edge>[4];
+                leaf.triEdges = new List<Line>[4];
+                foreach (var edge in mesh.Edges)
+                {
+                    var f = edge.Boundary;
+                    if (f == 0) continue;
+                    if (f < 5)
+                    {
+                        if (leaf.bbOut[f - 1] == null)
+                        {
+                            leaf.bbOut[f - 1] = new List<Edge>();
+                            leaf.triEdges[f - 1] = new List<Line>();
+                        }
+                        leaf.bbOut[f - 1].Add(new Edge(edge.P0, edge.P1));
+                        var P = mesh.Vertices.ElementAt(edge.P0);
+                        var Q = mesh.Vertices.ElementAt(edge.P1);
+                        leaf.triEdges[f - 1].Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
+                    }
+                }
+                leaf.n = mesh.Vertices.Count();
+                leaf.m = mesh.Edges.Count();
+                leaf.r = mesh.Triangles.Count();
+                int[,] lines = new int[leaf.m, 2];
+                int _i = 0;
+                foreach (var edge in mesh.Edges)
+                {
+                    lines[_i, 0] = edge.P0;
+                    lines[_i, 1] = edge.P1;
+                    _i++;
+                }
+                leaf.fixedPoints = new List<int>();
+                leaf.vertices = mesh.Vertices.ToArray();
+                leaf.edges = mesh.Edges.ToArray();
+                leaf.triangles = mesh.Triangles.ToArray();
+                foreach (var V in leaf.vertices)
+                {
+                    if (V.Boundary > 0) leaf.fixedPoints.Add(Array.IndexOf(leaf.vertices, V));
+                }
+                leaf.Laplacian = computeLaplacian(lines, leaf.n);
+                leaf.shiftArray = computeShiftArray(leaf.fixedPoints, leaf.n);
+                //Arranging bb
+                foreach (var bbb in leaf.bbOut)
+                {
+                    //Look for the first end
+                    Mesher.Geometry.Edge first = null;
+                    bool reverse = false;
+                    foreach (var bbbb in bbb)
+                    {
+                        int P = bbbb.P0;
+                        int count = 0;
+                        foreach (var bbbbb in bbb)
+                        {
+                            if (bbbbb.P0 == P || bbbbb.P1 == P) count++;
+                        }
+                        if (count == 1) { first = bbbb; break; }
+                        P = bbbb.P1;
+                        count = 0;
+                        foreach (var bbbbb in bbb)
+                        {
+                            if (bbbbb.P0 == P || bbbbb.P1 == P) count++;
+                        }
+                        if (count == 1) { first = bbbb; reverse = true; break; }
+                    }
+                    bbb.Remove(first);
+                    if (reverse)
+                    {
+                        first = new Edge(first.P1, first.P0);
+                    }
+                    bbb.Insert(0, first);
+                    for (int i = 0; i < bbb.Count - 1; i++)
+                    {
+                        Mesher.Geometry.Edge next = null;
+                        reverse = false;
+                        int P = bbb[i].P1;
+                        for (int j = i + 1; j < bbb.Count; j++)
+                        {
+                            if (bbb[j].P0 == P) { next = bbb[j]; break; }
+                            if (bbb[j].P1 == P) { next = bbb[j]; reverse = true; break; }
+                        }
+                        bbb.Remove(next);
+                        if (reverse) next = new Edge(next.P1, next.P0);
+                        bbb.Insert(i + 1, next);
+                    }
+                }
+            }
+/*          for (int i = 0; i < nUelem; i++)
             {
                 for (int j = 0; j < nVelem; j++)
                 {
@@ -484,285 +594,7 @@ namespace mikity.ghComponents
                     }
                 }
             }
-            InputGeometry input = new InputGeometry();
-            int tmpN = 0;
-            int N = 0;
-            int ss = 100;
-            foreach (var loop in face.Loops)
-            {
-                var _edges3D = loop.To3dCurve();
-                var _edges2D = loop.To2dCurve();
-                if (_edges3D is PolyCurve)
-                {
-                    var edges3D = _edges3D as PolyCurve;
-                    var edges2D = _edges2D as PolyCurve;
-                    nOutterSegments = edges3D.SegmentCount;
-                    for (int s = 0; s < edges3D.SegmentCount; s++)
-                    {
-                        var edge3D = edges3D.SegmentCurve(s);
-                        var edge2D = edges2D.SegmentCurve(s);
-                        var dom2D = edge2D.Domain;
-                        var dom3D=edge3D.Domain;
-                        for (int _t = 0; _t <= nPt2; _t++)
-                        {
-                            double t = dom2D[0] + (dom2D[1] - dom2D[0]) / ((double)nPt2) * _t;
-                            var P2D=edge2D.PointAt(t);
-                            var P3D=face.PointAt(P2D.X,P2D.Y);
-                            d.Add(P3D);
-                            d2.Add(new Point3d(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV, 0));
-                            if (_t == nPt2-1 && s == edges3D.SegmentCount - 1)
-                            {
-                                input.AddPoint(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV);
-                                N++;
-                                input.AddSegment(N - 1, tmpN,s+1);
-                            }
-                            else if(_t<nPt2-1)
-                            {
-                                if (_t == 0)
-                                {
-                                    input.AddPoint(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV);
-                                }
-                                else
-                                {
-                                    input.AddPoint(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV);
-                                }
-                                N++;
-                                input.AddSegment(N - 1, N,s+1);
-                            }
-                        }
-                    }
-                    tmpN = N;
-                }
-                else if(_edges3D is NurbsCurve)
-                {
-                    var edges3D = _edges3D as NurbsCurve;
-                    var edges2D = _edges2D as NurbsCurve;
-                    var dom2D=edges2D.Domain;
-                    var dom3D=edges3D.Domain;
-                    var center = new Point3d(0, 0, 0);
-                    for (int _t = 0; _t <= nPt2; _t++)
-                    {
-                        double t = dom2D[0] + (dom2D[1] - dom2D[0]) / ((double)nPt2) * _t;
-                        var P2D = edges2D.PointAt(t);
-                        var P3D = face.PointAt(P2D.X, P2D.Y);
-                        d.Add(P3D);
-                        d2.Add(new Point3d(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV, 0));
-                        if (_t < nPt2-1)
-                        {
-                            input.AddPoint(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV);
-                            center += P2D;
-                            N++;
-                            input.AddSegment(N - 1, N,ss);
-                        }
-                        else if(_t==nPt2-1)
-                        {
-                            input.AddPoint(P2D.X / scaleU - originU / scaleU, P2D.Y / scaleV - originV / scaleV);
-                            center += P2D;
-                            N++;
-                            input.AddSegment(N - 1, tmpN,ss);
-                        }
-                    }
-                    ss++;
-                    center /= nPt2;
-                    input.AddHole(center.X / scaleU - originU / scaleU, center.Y / scaleV - originV / scaleV);
-                    tmpN = N;
-                }
-            }
-            nInnerLoops = ss-100;
-            foreach (var l in input.Holes)
-            {
-                g.Add(new Point3d(l.X, l.Y, 0));
-            }
-            foreach (var l in input.Segments)
-            {
-                var P = input.Points.ElementAt(l.P0);
-                var Q = input.Points.ElementAt(l.P1);
-                f.Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
-            }
-
-
-            myControlBox.setNumF(nInnerLoops + nOutterSegments);
-            baseFunction = new DoubleArray[nInnerLoops + nOutterSegments];
-            coeff = new DoubleArray[nInnerLoops + nOutterSegments];
-            Function = new Func<double, double, double>[nInnerLoops + nOutterSegments];
-            dFunction = new Action<double, double, double[]>[nInnerLoops + nOutterSegments];
-            ddFunction = new Action<double, double, double[,]>[nInnerLoops + nOutterSegments];
-            myControlBox.setFunctionToCompute(() =>
-            {
-                if (lastComputed == nInnerLoops + nOutterSegments - 1) return;
-                lastComputed++;
-                computeBaseFunction(lastComputed);
-                this.ExpirePreview(true);
-                myControlBox.EnableRadio(lastComputed, (i) => { resultToPreview(i); this.ExpirePreview(true); });
-            }
-                );
-            Mesher.Mesh mesh = new Mesher.Mesh();
-            
-            mesh.Behavior.UseBoundaryMarkers = true;
-            mesh.Behavior.MaxArea = Math.Pow(Math.Min(input.Bounds.Width, input.Bounds.Height) / 10d, 2);
-            mesh.Behavior.Convex = false;
-            mesh.Behavior.Algorithm = TriangulationAlgorithm.SweepLine;
-            mesh.Behavior.ConformingDelaunay = true;
-            mesh.Triangulate(input);
-/*            Mesher.Tools.Statistic statistic = new Statistic();
-            statistic.Update(mesh, 0);
-            mesh.Behavior.MaxArea = statistic.SmallestArea * 1.2;            
-            */
-            mesh.Behavior.Quality = true;
-            mesh.Behavior.MinAngle = 30;
-            mesh.Behavior.MaxAngle = 100;
-            
-            mesh.Refine();
-            
-            mesh.Smooth();
-            mesh.Smooth();
-            foreach(var P in mesh.Vertices)
-            {
-                if (P.Attributes == null)
-                {
-                    gmesh.Vertices.Add(new Point3d(P.X, P.Y, 0));
-                }
-                else
-                {
-                    gmesh.Vertices.Add(new Point3d(P.X, P.Y, P.Attributes[0]));
-                }
-            }
-            foreach(var tri in mesh.Triangles)
-            {
-                gmesh.Faces.AddFace(tri.P0, tri.P1, tri.P2);
-            }
-
-            boundaries = new List<Line>[nOutterSegments];
-            holes = new List<Line>[nInnerLoops];
-            bbOut = new List<Edge>[nOutterSegments];
-            bbIn = new List<Edge>[nInnerLoops];
-            foreach (var edge in mesh.Edges)
-            {
-                var f = edge.Boundary;
-                if (f == 0) continue;
-                if (f < 100)
-                {
-                    if (boundaries[f-1] == null)
-                    {
-                        boundaries[f-1] = new List<Line>();
-                    }
-                    if (bbOut[f - 1] == null)
-                    {
-                        bbOut[f - 1] = new List<Edge>();
-                    }
-                    bbOut[f - 1].Add(new Edge(edge.P0, edge.P1));
-                    var P = mesh.Vertices.ElementAt(edge.P0);
-                    var Q = mesh.Vertices.ElementAt(edge.P1);
-                    boundaries[f-1].Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
-                }
-                else
-                {
-                    if (holes[f-100] == null)
-                    {
-                        holes[f-100] = new List<Line>();
-                    }
-                    if (bbIn[f - 100] == null)
-                    {
-                        bbIn[f - 100] = new List<Edge>();
-                    }
-                    bbIn[f - 100].Add(new Edge(edge.P0, edge.P1));
-                    var P = mesh.Vertices.ElementAt(edge.P0);
-                    var Q = mesh.Vertices.ElementAt(edge.P1);
-                    holes[f-100].Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
-                }
-            }
-            n = mesh.Vertices.Count();
-            m = mesh.Edges.Count();
-            r = mesh.Triangles.Count();
-            int[,] lines = new int[m, 2];
-            int _i = 0;
-            foreach (var edge in mesh.Edges)
-            {
-                lines[_i,0]=edge.P0;
-                lines[_i,1]=edge.P1;
-                _i++;
-            }
-            fixedPoints=new List<int>();
-            vertices=mesh.Vertices.ToArray();
-            edges=mesh.Edges.ToArray();
-            triangles = mesh.Triangles.ToArray();
-            foreach(var V in vertices)
-            {
-                if(V.Boundary>0)fixedPoints.Add(Array.IndexOf(vertices,V));
-            }
-            Laplacian = computeLaplacian(lines, n);
-            shiftArray = computeShiftArray(fixedPoints, n);
-
-            //Arranging bb
-            foreach (var bbb in bbOut)
-            {
-                //Look for the first end
-                Mesher.Geometry.Edge first=null;
-                bool reverse = false;
-                foreach (var bbbb in bbb)
-                {
-                    int P = bbbb.P0;
-                    int count = 0;
-                    foreach (var bbbbb in bbb)
-                    {
-                        if (bbbbb.P0 == P || bbbbb.P1 == P) count++;
-                    }
-                    if (count == 1) { first = bbbb; break; }
-                    P = bbbb.P1;
-                    count = 0;
-                    foreach (var bbbbb in bbb)
-                    {
-                        if (bbbbb.P0 == P || bbbbb.P1 == P) count++;
-                    }
-                    if (count == 1) { first = bbbb; reverse = true; break; }                    
-                }
-                bbb.Remove(first);
-                if (reverse)
-                {
-                    first = new Edge(first.P1, first.P0);
-                }
-                bbb.Insert(0, first);
-                for (int i = 0; i < bbb.Count-1; i++)
-                {
-                    Mesher.Geometry.Edge next = null;
-                    reverse = false;
-                    int P = bbb[i].P1;
-                    for (int j = i + 1; j < bbb.Count; j++)
-                    {
-                        if (bbb[j].P0 == P) { next = bbb[j]; break; }
-                        if (bbb[j].P1 == P) { next = bbb[j]; reverse = true; break; }
-                    }
-                    bbb.Remove(next);
-                    if (reverse) next = new Edge(next.P1, next.P0);
-                    bbb.Insert(i + 1, next);
-                }
-            }
-            foreach (var bbb in bbIn)
-            {
-                //For inner loops, any edge can be the first edge
-                Mesher.Geometry.Edge first = bbb[0];
-                bool reverse = false;
-                bbb.Remove(first);
-                if (reverse)
-                {
-                    first = new Edge(first.P1, first.P0);
-                }
-                bbb.Insert(0, first);
-                for (int i = 0; i < bbb.Count - 1; i++)
-                {
-                    Mesher.Geometry.Edge next = null;
-                    reverse = false;
-                    int P = bbb[i].P1;
-                    for (int j = i + 1; j < bbb.Count; j++)
-                    {
-                        if (bbb[j].P0 == P) { next = bbb[j]; break; }
-                        if (bbb[j].P1 == P) { next = bbb[j]; reverse = true; break; }
-                    }
-                    bbb.Remove(next);
-                    if (reverse) next = new Edge(next.P1, next.P0);
-                    bbb.Insert(i + 1, next);
-                }
-            }
+*/
         }
     }
 }
