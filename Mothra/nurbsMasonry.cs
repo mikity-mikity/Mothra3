@@ -299,7 +299,7 @@ namespace mikity.ghComponents
         public bool findCurve(ref branch target, List<branch> listBranch, NurbsCurve curve)
         {
             var Points = curve.Points;
-            var rPoints = curve.Points.Reverse() as Rhino.Geometry.Collections.NurbsCurvePointList;
+            var rPoints = curve.Points.Reverse().ToList();
 
             foreach (var branch in listBranch)
             {
