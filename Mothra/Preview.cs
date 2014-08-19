@@ -66,7 +66,7 @@ namespace mikity.ghComponents
                 }
                 if (leaf.airySrf != null)
                 {
-                    args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Violet, 2);
+                    args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Brown, 3);
                 }
             }
             /*if (a != null)

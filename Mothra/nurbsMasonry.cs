@@ -20,6 +20,8 @@ namespace mikity.ghComponents
     {
         public class leaf
         {
+            public int varOffset;
+            public int conOffset;
             public List<Mesher.Geometry.Edge>[] bbOut;
             public List<Line>[] triEdges;
             public List<Line> result;
@@ -134,6 +136,8 @@ namespace mikity.ghComponents
         protected override void RegisterInputParams(Grasshopper.Kernel.GH_Component.GH_InputParamManager pManager)
         {
             pManager.AddSurfaceParameter("listSurface", "lstSrf", "list of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddCurveParameter("listCurve", "lstCrv", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddTextParameter("listType", "lstType", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
         }
         protected override void RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager pManager)
         {
@@ -243,9 +247,9 @@ namespace mikity.ghComponents
                     {
                         leaf.myMasonry.elemList[tup.index].precompute(tup);
                     }
-                    //call mosek
-                    mosek1(leaf);
                 }
+                //call mosek
+                mosek1(listLeaf);
                 //For preview
                 crossMagenta.Clear();
                 crossCyan.Clear();

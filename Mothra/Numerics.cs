@@ -23,63 +23,59 @@ namespace mikity.ghComponents
 
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
-        public void mosek1(leaf leaf)
+        public void mosek1(List<leaf> _listLeaf)
         {
-            int numvar = leaf.nU * leaf.nV + leaf.r * 3;
-            int numcon = leaf.r * 3;// H11,H22,H12;
-            
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
             double infinity = 0;
+            int[] csub = new int[3];// for cones
+            int numvar = 0;
+            int numcon = 0;
+            foreach (var leaf in _listLeaf)
+            {
+                leaf.varOffset = numvar;
+                leaf.conOffset = numcon;
+                numvar += leaf.nU * leaf.nV + leaf.r * 3;
+                numcon += leaf.r * 3;// H11,H22,H12;
+            }
 
-            //mosek.boundkey[] bkc = { mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx };  //fix: fix to lower bound
-            //double[] blc = { 0, 0, 0, 0, 10 };
-            //double[] buc = { 0, 0, 0, 0, 10 };
 
             mosek.boundkey[] bkx = new mosek.boundkey[numvar];
             double[] blx = new double[numvar];
             double[] bux = new double[numvar];
-            for (int i = 0; i < leaf.nU * leaf.nV; i++)
+            foreach (var leaf in _listLeaf)
             {
-                bkx[i] = mosek.boundkey.fr;
-                blx[i] = -infinity;
-                bux[i] = infinity;
+                for (int i = 0; i < leaf.nU * leaf.nV; i++)
+                {
+                    bkx[i+leaf.varOffset] = mosek.boundkey.fr;
+                    blx[i + leaf.varOffset] = -infinity;
+                    bux[i + leaf.varOffset] = infinity;
+                }
+                int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
+                int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
+                foreach (int i in fxP)
+                {
+                    bkx[i + leaf.varOffset] = mosek.boundkey.fx;
+                    blx[i + leaf.varOffset] = 0;
+                    bux[i + leaf.varOffset] = 0;
+                }
+                bkx[centerP + leaf.varOffset] = mosek.boundkey.fx;
+                blx[centerP + leaf.varOffset] = 10;
+                bux[centerP + leaf.varOffset] = 10;
+                for (int i = 0; i < leaf.r; i++)
+                {
+                    int n = i * 3 + leaf.nU * leaf.nV;
+                    bkx[n + leaf.varOffset] = mosek.boundkey.fr;
+                    blx[n + leaf.varOffset] = -infinity;
+                    bux[n + leaf.varOffset] = infinity;
+                    bkx[n + 1 + leaf.varOffset] = mosek.boundkey.fr;
+                    blx[n + 1 + leaf.varOffset] = -infinity;
+                    bux[n + 1 + leaf.varOffset] = infinity;
+                    bkx[n + 2 + leaf.varOffset] = mosek.boundkey.fr;
+                    blx[n + 2 + leaf.varOffset] = -infinity;
+                    bux[n + 2 + leaf.varOffset] = infinity;
+                }
             }
-            int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
-            int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
-            foreach (int i in fxP)
-            {
-                bkx[i] = mosek.boundkey.fx;
-                blx[i] = 0;
-                bux[i] = 0;
-            }
-            bkx[centerP] = mosek.boundkey.fx;
-            blx[centerP] = 10;
-            bux[centerP] = 10;
-            for (int i = 0; i < leaf.r;i++ )
-            {
-                int n = i * 3 + leaf.nU * leaf.nV;
-                bkx[n] = mosek.boundkey.fr;
-                blx[n] = -infinity;
-                bux[n] = infinity;
-                bkx[n + 1] = mosek.boundkey.fr;
-                blx[n + 1] = -infinity;
-                bux[n + 1] = infinity;
-                bkx[n + 2] = mosek.boundkey.fr;
-                blx[n + 2] = -infinity;
-                bux[n + 2] = infinity;
-            }
-            int[] csub = new int[3];// for cones
-            /*//for constraints
-                        double[][] aval = {new double[] {1.0},
-                                     new double[] {1.0},
-                                     new double[] {2.0}};
-
-                        int[][] asub = {new int[] {0},
-                                     new int[] {0},
-                                     new int[] {0}};
-
-                        */
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
             {
@@ -101,71 +97,74 @@ namespace mikity.ghComponents
                     for (int j = 0; j < numvar; ++j)
                     {
                         /* Set the linear term c_j in the objective.*/
-                        task.putcj(j, 1);
+                        //task.putcj(j, 1);
                         /* Set the bounds on variable j.
                                blx[j] <= x_j <= bux[j] */
                         task.putvarbound(j, bkx[j], blx[j], bux[j]);
                     }
                     double root2 = Math.Sqrt(2);
-                    //define H11,H12,H22
-                    for (int i = 0; i < leaf.r; i++)
+                    foreach (var leaf in listLeaf)
                     {
-                        int N11 = i * 3; //condition number
-                        int N22 = i * 3 + 1;
-                        int N12 = i * 3 + 2;
-                        int target=i*3+leaf.nU * leaf.nV;   //variable numver
-                        task.putaij(N11, target, -1);
-                        task.putconbound(N11, mosek.boundkey.fx, 0, 0);
-                        task.putaij(N22, target+1, -1);
-                        task.putconbound(N22, mosek.boundkey.fx, 0, 0);
-                        task.putaij(N12, target+2, -1);
-                        task.putconbound(N12, mosek.boundkey.fx, 0, 0);
-                        //N11
-                        double[] grad = new double[leaf.tuples[i].nDV];
-                        leaf.tuples[i].d2[0, 0].CopyTo(grad, 0);
-                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
+                        //define H11,H12,H22
+                        for (int i = 0; i < leaf.r; i++)
                         {
-                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            int N11 = i * 3; //condition number
+                            int N22 = i * 3 + 1;
+                            int N12 = i * 3 + 2;
+                            int target = i * 3 + leaf.nU * leaf.nV+leaf.varOffset;   //variable numver
+                            task.putaij(N11+leaf.conOffset, target, -1);
+                            task.putconbound(N11 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
+                            task.putaij(N22 + leaf.conOffset, target + 1, -1);
+                            task.putconbound(N22 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
+                            task.putaij(N12 + leaf.conOffset, target + 2, -1);
+                            task.putconbound(N12 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
+                            //N11
+                            double[] grad = new double[leaf.tuples[i].nDV];
+                            leaf.tuples[i].d2[0, 0].CopyTo(grad, 0);
+                            for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
-                                grad[k] -= leaf.tuples[i].Gammaijk[0, 0, j] * leaf.tuples[i].d1[j][k];
+                                for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                                {
+                                    grad[k] -= leaf.tuples[i].Gammaijk[0, 0, j] * leaf.tuples[i].d1[j][k];
+                                }
+                                task.putaij(N11 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + leaf.varOffset, - grad[k] / root2);
                             }
-                            task.putaij(N11, leaf.tuples[i].internalIndex[k], -grad[k]/root2);
-                        }
-                        //N22
-                        leaf.tuples[i].d2[1, 1].CopyTo(grad, 0);
-                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
-                        {
-                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            //N22
+                            leaf.tuples[i].d2[1, 1].CopyTo(grad, 0);
+                            for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
-                                grad[k] -= leaf.tuples[i].Gammaijk[1, 1, j] * leaf.tuples[i].d1[j][k];
+                                for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                                {
+                                    grad[k] -= leaf.tuples[i].Gammaijk[1, 1, j] * leaf.tuples[i].d1[j][k];
+                                }
+                                task.putaij(N22 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + leaf.varOffset, -grad[k] / root2);
                             }
-                            task.putaij(N22, leaf.tuples[i].internalIndex[k], -grad[k]/root2);
-                        }
-                        //N12
-                        leaf.tuples[i].d2[0, 1].CopyTo(grad, 0);
-                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
-                        {
-                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            //N12
+                            leaf.tuples[i].d2[0, 1].CopyTo(grad, 0);
+                            for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
-                                grad[k] -= leaf.tuples[i].Gammaijk[0, 1, j] * leaf.tuples[i].d1[j][k];
+                                for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                                {
+                                    grad[k] -= leaf.tuples[i].Gammaijk[0, 1, j] * leaf.tuples[i].d1[j][k];
+                                }
+                                task.putaij(N12 + leaf.conOffset, leaf.tuples[i].internalIndex[k]+leaf.varOffset, -grad[k]);
                             }
-                            task.putaij(N12, leaf.tuples[i].internalIndex[k], -grad[k]);
-                        }
 
-                    }
-                    /*CONE*/
-                    for (int i = 0; i < leaf.r; i++)
-                    {
-                        int N11 = i * 3 + leaf.nU * leaf.nV; //variable number
-                        int N22 = i * 3 + 1 + leaf.nU * leaf.nV;
-                        int N12 = i * 3 + 2 + leaf.nU * leaf.nV;
+                        }
+                        /*CONE*/
+                        for (int i = 0; i < leaf.r; i++)
+                        {
+                            int N11 = i * 3 + leaf.nU * leaf.nV; //variable number
+                            int N22 = i * 3 + 1 + leaf.nU * leaf.nV;
+                            int N12 = i * 3 + 2 + leaf.nU * leaf.nV;
 
-                        csub[0] = N11;
-                        csub[1] = N22;
-                        csub[2] = N12;
-                        task.appendcone(mosek.conetype.rquad,
-                                        0.0, // For future use only, can be set to 0.0 
-                                        csub);
+                            csub[0] = N11 + leaf.varOffset;
+                            csub[1] = N22 + leaf.varOffset;
+                            csub[2] = N12 + leaf.varOffset;
+                            task.appendcone(mosek.conetype.rquad,
+                                            0.0, // For future use only, can be set to 0.0 
+                                            csub);
+                        }
                     }
                     task.putobjsense(mosek.objsense.minimize);
                     task.optimize();
@@ -186,9 +185,7 @@ namespace mikity.ghComponents
                     {
                         case mosek.solsta.optimal:
                         case mosek.solsta.near_optimal:
-                            Console.WriteLine("Optimal primal solution\n");
-                            for (int j = 0; j < numvar; ++j)
-                                Console.WriteLine("x[{0}]: {1}", j, xx[j]);
+                            System.Windows.Forms.MessageBox.Show("Optimal primal solution\n");
                             break;
                         case mosek.solsta.dual_infeas_cer:
                         case mosek.solsta.prim_infeas_cer:
@@ -204,32 +201,35 @@ namespace mikity.ghComponents
                             break;
 
                     }
-                    leaf.airySrf = leaf.srf.Duplicate() as NurbsSurface;
-                    for (int j = 0; j < leaf.nV; j++)
+                    foreach (var leaf in listLeaf)
                     {
-                        for (int i = 0; i < leaf.nU; i++)
+                        leaf.airySrf = leaf.srf.Duplicate() as NurbsSurface;
+                        for (int j = 0; j < leaf.nV; j++)
                         {
-                            var P=leaf.srf.Points.GetControlPoint(i,j);
-                            leaf.airySrf.Points.SetControlPoint(i, j, new ControlPoint(P.Location.X, P.Location.Y, xx[i + j * leaf.nU]));
+                            for (int i = 0; i < leaf.nU; i++)
+                            {
+                                var P = leaf.srf.Points.GetControlPoint(i, j);
+                                leaf.airySrf.Points.SetControlPoint(i, j, new ControlPoint(P.Location.X, P.Location.Y, xx[i + j * leaf.nU+leaf.varOffset]));
+                            }
                         }
-                    }
-                    for (int j = 0; j < leaf.r; j++)
-                    {
-                        int N11 = j * 3 + leaf.nU * leaf.nV; //variable number
-                        int N22 = j * 3 + 1 + leaf.nU * leaf.nV;
-                        int N12 = j * 3 + 2 + leaf.nU * leaf.nV;
-                        leaf.tuples[j].H[0, 0] = xx[N11]*root2;
-                        leaf.tuples[j].H[1, 1] = xx[N22] * root2;
-                        leaf.tuples[j].H[0, 1] = xx[N12];
-                        leaf.tuples[j].H[1, 0] = xx[N12];
-                        //Hodge star
-                        double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
-                        leaf.tuples[j].SPK[0, 0] = xx[N22] * g * root2;
-                        leaf.tuples[j].SPK[1, 1] = xx[N11] * g * root2;
-                        leaf.tuples[j].SPK[0, 1] = -xx[N12] * g;
-                        leaf.tuples[j].SPK[1, 0] = -xx[N12] * g;
-                        
-                        leaf.tuples[j].computeEigenVectors();
+                        for (int j = 0; j < leaf.r; j++)
+                        {
+                            int N11 = j * 3 + leaf.nU * leaf.nV; //variable number
+                            int N22 = j * 3 + 1 + leaf.nU * leaf.nV;
+                            int N12 = j * 3 + 2 + leaf.nU * leaf.nV;
+                            leaf.tuples[j].H[0, 0] = xx[N11+leaf.varOffset] * root2;
+                            leaf.tuples[j].H[1, 1] = xx[N22 + leaf.varOffset] * root2;
+                            leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
+                            leaf.tuples[j].H[1, 0] = xx[N12 + leaf.varOffset];
+                            //Hodge star
+                            double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
+                            leaf.tuples[j].SPK[0, 0] = xx[N22 + leaf.varOffset] * g * root2;
+                            leaf.tuples[j].SPK[1, 1] = xx[N11 + leaf.varOffset] * g * root2;
+                            leaf.tuples[j].SPK[0, 1] = -xx[N12 + leaf.varOffset] * g;
+                            leaf.tuples[j].SPK[1, 0] = -xx[N12 + leaf.varOffset] * g;
+
+                            leaf.tuples[j].computeEigenVectors();
+                        }
                     }
                 }
             }
