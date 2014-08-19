@@ -11,6 +11,9 @@ namespace Minilla3D.Elements
         public class tuple
         {
             public int index;  //element index
+            public int[] internalIndex;
+            public int nDV;
+            public int elemDim;
             public double area;
             int N;
 
@@ -117,23 +120,25 @@ namespace Minilla3D.Elements
             //double[][,] M=new double[2][,];
 		    //M[0]=fM(uNum,_uDim,_uDim-1,uKnot);
 		    //M[1]=fM(vNum,_vDim,_vDim-1,vKnot);
-
+            tup.internalIndex = this.index;
+            tup.nDV = nDV/3;
+            tup.elemDim = elemDim;
             tup.shape = new double[__DIM, nDV];                        //Global coordinate *coefficient*
             tup.C = new double[elemDim, __DIM, nDV];                //Base vectors *coefficient*
             tup.B = new double[elemDim, elemDim, nDV, nDV];          //Metric *coefficient*
             tup.D = new double[elemDim, elemDim, __DIM, nDV];   //Hessian coefficient
-            tup.d0 = new double[nDV];
+            tup.d0 = new double[nDV/3];
             tup.d1 = new double[elemDim][];
             tup.d2 = new double[elemDim, elemDim][];
             for (int i = 0; i < elemDim; i++)
             {
-                tup.d1[i] = new double[nDV];
+                tup.d1[i] = new double[nDV/3];
             }
             for (int i = 0; i < elemDim; i++)
             {
                 for (int j = 0; j < elemDim; j++)
                 {
-                    tup.d2[i, j] = new double[nDV];
+                    tup.d2[i, j] = new double[nDV/3];
                 }
             }
 

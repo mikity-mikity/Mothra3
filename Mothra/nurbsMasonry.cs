@@ -26,6 +26,7 @@ namespace mikity.ghComponents
             public Minilla3D.Objects.masonry myMasonry;
 
             public NurbsSurface srf;
+            public NurbsSurface airySrf;
             public Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
             public SparseDoubleArray Laplacian;
             public SparseDoubleArray shiftArray;

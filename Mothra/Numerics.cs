@@ -25,8 +25,8 @@ namespace mikity.ghComponents
     {
         public void mosek1(leaf leaf)
         {
-            int numvar = leaf.nU * leaf.nV;
-            int numcon = 0;// leaf.r;
+            int numvar = leaf.nU * leaf.nV + leaf.r * 3;
+            int numcon = leaf.r * 3;// H11,H22,H12;
             
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -39,11 +39,11 @@ namespace mikity.ghComponents
             mosek.boundkey[] bkx = new mosek.boundkey[numvar];
             double[] blx = new double[numvar];
             double[] bux = new double[numvar];
-            for (int i = 0; i < numvar; i++)
+            for (int i = 0; i < leaf.nU * leaf.nV; i++)
             {
-                bkx[i] = mosek.boundkey.ra;
-                blx[i] = 2;
-                bux[i] = 8;
+                bkx[i] = mosek.boundkey.fr;
+                blx[i] = -infinity;
+                bux[i] = infinity;
             }
             int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
             int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
@@ -56,42 +56,30 @@ namespace mikity.ghComponents
             bkx[centerP] = mosek.boundkey.fx;
             blx[centerP] = 10;
             bux[centerP] = 10;
-            /*mosek.boundkey[] bkx = {mosek.boundkey.lo,
-                            mosek.boundkey.lo,
-                            mosek.boundkey.lo,
-                            mosek.boundkey.fr,          
-                            mosek.boundkey.fr,
-                            mosek.boundkey.fr};
-            double[] blx = { 0.0,
-                     0.0,
-                     0.0,
-                     -infinity,
-                     -infinity,
-                     -infinity};
-            double[] bux = { +infinity,
-                     +infinity,
-                     +infinity,
-                     +infinity,
-                     +infinity,
-                     +infinity};
-            */
-/*            double[] c = { 0.0,
-                     0.0,
-                     0.0,
-                     1.0,
-                     1.0,
-                     1.0};
+            for (int i = 0; i < leaf.r;i++ )
+            {
+                int n = i * 3 + leaf.nU * leaf.nV;
+                bkx[n] = mosek.boundkey.fr;
+                blx[n] = -infinity;
+                bux[n] = infinity;
+                bkx[n + 1] = mosek.boundkey.fr;
+                blx[n + 1] = -infinity;
+                bux[n + 1] = infinity;
+                bkx[n + 2] = mosek.boundkey.fr;
+                blx[n + 2] = -infinity;
+                bux[n + 2] = infinity;
+            }
+            int[] csub = new int[3];// for cones
+            /*//for constraints
+                        double[][] aval = {new double[] {1.0},
+                                     new double[] {1.0},
+                                     new double[] {2.0}};
 
-            double[][] aval = {new double[] {1.0},
-                         new double[] {1.0},
-                         new double[] {2.0}};
+                        int[][] asub = {new int[] {0},
+                                     new int[] {0},
+                                     new int[] {0}};
 
-            int[][] asub = {new int[] {0},
-                         new int[] {0},
-                         new int[] {0}};
-
-            int[] csub = new int[3];
-            */
+                        */
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
             {
@@ -118,18 +106,66 @@ namespace mikity.ghComponents
                                blx[j] <= x_j <= bux[j] */
                         task.putvarbound(j, bkx[j], blx[j], bux[j]);
                     }
-                    /*
-                    for (int j = 0; j < aval.Length; ++j)
-                        // Input column j of A 
-                        task.putacol(j,          // Variable (column) index.
-                                     asub[j],     // Row index of non-zeros in column j.
-                                     aval[j]);    // Non-zero Values of column j. 
-                    */
-                    /* Set the bounds on constraints.
-                         for i=1, ...,numcon : blc[i] <= constraint i <= buc[i] */
-                    //for (int i = 0; i < numcon; ++i)
-                    //    task.putconbound(i, bkc[i], blc[i], buc[i]);
+                    double root2 = Math.Sqrt(2);
+                    //define H11,H12,H22
+                    for (int i = 0; i < leaf.r; i++)
+                    {
+                        int N11 = i * 3; //condition number
+                        int N22 = i * 3 + 1;
+                        int N12 = i * 3 + 2;
+                        int target=i*3+leaf.nU * leaf.nV;   //variable numver
+                        task.putaij(N11, target, -1);
+                        task.putconbound(N11, mosek.boundkey.fx, 0, 0);
+                        task.putaij(N22, target+1, -1);
+                        task.putconbound(N22, mosek.boundkey.fx, 0, 0);
+                        task.putaij(N12, target+2, -1);
+                        task.putconbound(N12, mosek.boundkey.fx, 0, 0);
+                        //N11
+                        double[] grad = new double[leaf.tuples[i].nDV];
+                        leaf.tuples[i].d2[0, 0].CopyTo(grad, 0);
+                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
+                        {
+                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            {
+                                grad[k] -= leaf.tuples[i].Gammaijk[0, 0, j] * leaf.tuples[i].d1[j][k];
+                            }
+                            task.putaij(N11, leaf.tuples[i].internalIndex[k], -grad[k]*root2);
+                        }
+                        //N22
+                        leaf.tuples[i].d2[1, 1].CopyTo(grad, 0);
+                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
+                        {
+                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            {
+                                grad[k] -= leaf.tuples[i].Gammaijk[1, 1, j] * leaf.tuples[i].d1[j][k];
+                            }
+                            task.putaij(N22, leaf.tuples[i].internalIndex[k], -grad[k]*root2);
+                        }
+                        //N12
+                        leaf.tuples[i].d2[0, 1].CopyTo(grad, 0);
+                        for (int k = 0; k < leaf.tuples[i].nDV; k++)
+                        {
+                            for (int j = 0; j < leaf.tuples[i].elemDim; j++)
+                            {
+                                grad[k] -= leaf.tuples[i].Gammaijk[0, 1, j] * leaf.tuples[i].d1[j][k];
+                            }
+                            task.putaij(N12, leaf.tuples[i].internalIndex[k], -grad[k]);
+                        }
 
+                    }
+                    for (int i = 0; i < leaf.r; i++)
+                    {
+                        int N11 = i * 3 + leaf.nU * leaf.nV; //condition number
+                        int N22 = i * 3 + 1 + leaf.nU * leaf.nV;
+                        int N12 = i * 3 + 2 + leaf.nU * leaf.nV;
+
+                        csub[0] = N11;
+                        csub[1] = N22;
+                        csub[2] = N12;
+                        task.appendcone(mosek.conetype.rquad,
+                                        0.0, // For future use only, can be set to 0.0 
+                                        csub);
+                    }
                     /*CONE*/
                     /*
                     csub[0] = 3;
@@ -179,6 +215,15 @@ namespace mikity.ghComponents
                             Console.WriteLine("Other solution status");
                             break;
 
+                    }
+                    leaf.airySrf = leaf.srf.Duplicate() as NurbsSurface;
+                    for (int j = 0; j < leaf.nV; j++)
+                    {
+                        for (int i = 0; i < leaf.nU; i++)
+                        {
+                            var P=leaf.srf.Points.GetControlPoint(i,j);
+                            leaf.airySrf.Points.SetControlPoint(i, j, new ControlPoint(P.Location.X, P.Location.Y, xx[i + j * leaf.nU]));
+                        }
                     }
                 }
             }
