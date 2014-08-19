@@ -25,18 +25,38 @@ namespace mikity.ghComponents
     {
         public void mosek1(leaf leaf)
         {
-            const int numcon = 1;
-            const int numvar = 6;
-
+            int numvar = leaf.nU * leaf.nV;
+            int numcon = 0;// leaf.r;
+            
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
             double infinity = 0;
 
-            mosek.boundkey[] bkc = { mosek.boundkey.fx };
-            double[] blc = { 1.0 };
-            double[] buc = { 1.0 };
+            //mosek.boundkey[] bkc = { mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx, mosek.boundkey.fx };  //fix: fix to lower bound
+            //double[] blc = { 0, 0, 0, 0, 10 };
+            //double[] buc = { 0, 0, 0, 0, 10 };
 
-            mosek.boundkey[] bkx = {mosek.boundkey.lo,
+            mosek.boundkey[] bkx = new mosek.boundkey[numvar];
+            double[] blx = new double[numvar];
+            double[] bux = new double[numvar];
+            for (int i = 0; i < numvar; i++)
+            {
+                bkx[i] = mosek.boundkey.ra;
+                blx[i] = 2;
+                bux[i] = 8;
+            }
+            int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
+            int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
+            foreach (int i in fxP)
+            {
+                bkx[i] = mosek.boundkey.fx;
+                blx[i] = 0;
+                bux[i] = 0;
+            }
+            bkx[centerP] = mosek.boundkey.fx;
+            blx[centerP] = 10;
+            bux[centerP] = 10;
+            /*mosek.boundkey[] bkx = {mosek.boundkey.lo,
                             mosek.boundkey.lo,
                             mosek.boundkey.lo,
                             mosek.boundkey.fr,          
@@ -54,8 +74,8 @@ namespace mikity.ghComponents
                      +infinity,
                      +infinity,
                      +infinity};
-
-            double[] c = { 0.0,
+            */
+/*            double[] c = { 0.0,
                      0.0,
                      0.0,
                      1.0,
@@ -71,7 +91,7 @@ namespace mikity.ghComponents
                          new int[] {0}};
 
             int[] csub = new int[3];
-
+            */
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
             {
@@ -93,33 +113,36 @@ namespace mikity.ghComponents
                     for (int j = 0; j < numvar; ++j)
                     {
                         /* Set the linear term c_j in the objective.*/
-                        task.putcj(j, c[j]);
+                        task.putcj(j, 1);
                         /* Set the bounds on variable j.
                                blx[j] <= x_j <= bux[j] */
                         task.putvarbound(j, bkx[j], blx[j], bux[j]);
                     }
-
+                    /*
                     for (int j = 0; j < aval.Length; ++j)
-                        /* Input column j of A */
-                        task.putacol(j,          /* Variable (column) index.*/
-                                     asub[j],     /* Row index of non-zeros in column j.*/
-                                     aval[j]);    /* Non-zero Values of column j. */
-
+                        // Input column j of A 
+                        task.putacol(j,          // Variable (column) index.
+                                     asub[j],     // Row index of non-zeros in column j.
+                                     aval[j]);    // Non-zero Values of column j. 
+                    */
                     /* Set the bounds on constraints.
                          for i=1, ...,numcon : blc[i] <= constraint i <= buc[i] */
-                    for (int i = 0; i < numcon; ++i)
-                        task.putconbound(i, bkc[i], blc[i], buc[i]);
+                    //for (int i = 0; i < numcon; ++i)
+                    //    task.putconbound(i, bkc[i], blc[i], buc[i]);
 
+                    /*CONE*/
+                    /*
                     csub[0] = 3;
                     csub[1] = 0;
                     csub[2] = 1;
                     task.appendcone(mosek.conetype.quad,
-                                    0.0, /* For future use only, can be set to 0.0 */
+                                    0.0, // For future use only, can be set to 0.0 
                                     csub);
                     csub[0] = 4;
                     csub[1] = 5;
                     csub[2] = 2;
                     task.appendcone(mosek.conetype.rquad, 0.0, csub);
+                    */
                     task.putobjsense(mosek.objsense.minimize);
                     task.optimize();
                     // Print a summary containing information
