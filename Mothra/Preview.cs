@@ -15,6 +15,15 @@ namespace mikity.ghComponents
             {
                 return;
             }
+            //eigenvectors
+            if (crossCyan != null)
+            {
+                args.Display.DrawLines(crossCyan, System.Drawing.Color.Cyan);
+            }
+            if (crossMagenta != null)
+            {
+                args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
+            }
             //Mesher edges
             if (f != null)
             {
@@ -60,76 +69,11 @@ namespace mikity.ghComponents
                     args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Violet, 2);
                 }
             }
-            if (a != null)
+            /*if (a != null)
             {
                 args.Display.DrawPoints(a, Rhino.Display.PointStyle.X, 2, System.Drawing.Color.Blue);
 
-            }
-            /*          if (holes != null)
-                        {
-                            for (int i = 0; i < holes.Count(); i++)
-                            {
-                                var hole = holes[i];
-                                if (hole != null)
-                                {
-                                    System.Drawing.Color color = System.Drawing.Color.Red;
-                                    if (i == 0) color = System.Drawing.Color.Pink;
-                                    if (i == 1) color = System.Drawing.Color.LightBlue;
-                                    if (i == 2) color = System.Drawing.Color.LightGreen;
-                                    if (i == 3) color = System.Drawing.Color.LightYellow;
-                                    if (i == 4) color = System.Drawing.Color.LightCoral;
-                                    if (i == 5) color = System.Drawing.Color.LightSeaGreen;
-                                    if (i == 6) color = System.Drawing.Color.LightCyan;
-                                    foreach (var bb in hole)
-                                    {
-                                        args.Display.DrawLine(bb, color, 5);
-
-                                    }
-                                }
-                            }
-                        }
-
-                        if (g != null)
-                        {
-                            args.Display.DrawPoints(g, Rhino.Display.PointStyle.ActivePoint, 2, System.Drawing.Color.Bisque);
-                        }
-                        if (a2 != null)
-                        {
-                            args.Display.DrawPoints(a2, Rhino.Display.PointStyle.X, 10, System.Drawing.Color.Blue);
-                        }
-                        if (b != null)
-                        {
-                            args.Display.DrawPoints(b, Rhino.Display.PointStyle.ControlPoint, 2, System.Drawing.Color.Orange);
-                        }
-                        if (b2 != null)
-                        {
-                            args.Display.DrawPoints(b2, Rhino.Display.PointStyle.ControlPoint, 2, System.Drawing.Color.Orange);
-                        }
-                        if (d != null)
-                        {
-                            args.Display.DrawPoints(d, Rhino.Display.PointStyle.Simple, 2, System.Drawing.Color.Brown);
-                        }
-                        //Integrating Points
-                        if (dd2 != null)
-                        {
-                            args.Display.DrawPoints(dd2, Rhino.Display.PointStyle.X, 8, System.Drawing.Color.Violet);
-                        }
-                        if (dd != null)
-                        {
-                            args.Display.DrawPoints(dd, Rhino.Display.PointStyle.ControlPoint, 4, System.Drawing.Color.LimeGreen);
-                        }
-                        //base vectors
-                        if (basis2 != null)
-                        {
-                            args.Display.DrawLines(basis2, System.Drawing.Color.Red, 4);
-                        }
-                        if (c != null)
-                        {
-                            foreach(var curve in c)
-                            {
-                                args.Display.DrawCurve(curve, System.Drawing.Color.Red);
-                            }
-                        }*/
+            }*/
         }
     }
 }

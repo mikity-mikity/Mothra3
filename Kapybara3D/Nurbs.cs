@@ -46,7 +46,100 @@ namespace Minilla3D.Elements
             public double[, ,] C;
             public double[, , ,] B;
             public double[, , ,] D;
+            public double[,] H;
+            public double[,] SPK;
             public double dv, refDv;
+            public double[][] eigenVectors;
+            public double[] eigenValues;
+            public void computeEigenVectors()
+            {
+                if (elemDim != 2) return;
+
+                if (this.dv == 0)
+                {
+                    this.eigenValues[0] = 0;
+                    this.eigenValues[1] = 0;
+                    for (int i = 0; i < elemDim; i++)
+                    {
+                        for (int k = 0; k < __DIM; k++)
+                        {
+                            this.eigenVectors[i][k] = 0;
+                        }
+                    }
+                }
+                else
+                {
+                    double a = SPK[0, 0] * gij[0, 0] + SPK[0, 1] * gij[1, 0];
+                    double c = SPK[0, 0] * gij[0, 1] + SPK[0, 1] * gij[1, 1];
+                    double b = SPK[1, 0] * gij[0, 0] + SPK[1, 1] * gij[1, 0];
+                    double d = SPK[1, 0] * gij[0, 1] + SPK[1, 1] * gij[1, 1];
+
+                    //1. EigenValues
+                    double f = a + d; double s = Math.Sqrt(f * f - 4 * (a * d - b * c));
+                    double l1 = (f + s) / 2;
+                    double l2 = (f - s) / 2;
+
+                    //2. EigenVectors
+                    double P11 = 0, P21 = 0, P12 = 0, P22 = 0;
+                    if (c != 0)
+                    {
+                        P11 = l1 - d;
+                        P21 = c;
+
+                        P12 = l2 - d;
+                        P22 = c;
+                    }
+                    else if (b != 0)
+                    {
+                        P11 = b;
+                        P21 = l1 - a;
+
+                        P12 = b;
+                        P22 = l2 - a;
+                    }
+                    else
+                    {
+                        P11 = 1;
+                        P21 = 0;
+
+                        P12 = 0;
+                        P22 = 1;
+                    }
+
+                    double norm;
+                    norm = Math.Sqrt(Gij[0, 0] * P11 * P11 + 2 * Gij[0, 1] * P11 * P21 + Gij[1, 1] * P21 * P21);
+                    if (norm != 0)
+                    {
+                        P11 /= norm;
+                        P21 /= norm;
+                    }
+                    norm = Math.Sqrt(Gij[0, 0] * P12 * P12 + 2 * Gij[0, 1] * P12 * P22 + Gij[1, 1] * P22 * P22);
+                    if (norm != 0)
+                    {
+                        P12 /= norm;
+                        P22 /= norm;
+                    }
+                    this.eigenValues[0] = l1;
+                    this.eigenValues[1] = l2;
+
+                    for (int i = 0; i < elemDim; i++)
+                    {
+                        for (int k = 0; k < 3; k++)
+                        {
+                            this.eigenVectors[i][k] = 0;
+                        }
+                    }
+
+                    for (int k = 0; k < 2; k++)
+                    {
+                        this.eigenVectors[0][k] += P11 * this.Gi[0][k];
+                        this.eigenVectors[0][k] += P21 * this.Gi[1][k];
+                        this.eigenVectors[1][k] += P12 * this.Gi[0][k];
+                        this.eigenVectors[1][k] += P22 * this.Gi[1][k];
+                    }
+                }
+            }
+
             public void CtoB(int elemDim,int nDV)
             {
                 for (int i = 0; i < elemDim; i++)
@@ -111,6 +204,11 @@ namespace Minilla3D.Elements
                 second = new double[2, 2][] { { new double[3], new double[3] }, { new double[3], new double[3] } };
                 Gammaijk2 = new double[2, 2, 2];
                 second2 = new double[2, 2][] { { new double[3], new double[3] }, { new double[3], new double[3] } };
+                H = new double[2, 2];
+                SPK = new double[2, 2];
+                eigenVectors = new double[2][] { new double[3], new double[3] };
+                eigenValues = new double[2];
+            
             }
         }
         public void precompute(tuple tup)
@@ -300,6 +398,17 @@ namespace Minilla3D.Elements
                     }
                 }
             }
+            //Global position
+            double X = 0, Y = 0,Z=0;
+            for (int i = 0; i < nDV; i++)
+            {
+                X += tup.shape[0, i] * node[i];
+                Y += tup.shape[1, i] * node[i];
+                Z += tup.shape[2, i] * node[i];
+            }
+            tup.x = X;
+            tup.y = Y;
+            tup.z = Z;
             //covariant base vectors
             for (int n = 0; n < elemDim; n++)
             {

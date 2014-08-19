@@ -129,7 +129,7 @@ namespace mikity.ghComponents
                             {
                                 grad[k] -= leaf.tuples[i].Gammaijk[0, 0, j] * leaf.tuples[i].d1[j][k];
                             }
-                            task.putaij(N11, leaf.tuples[i].internalIndex[k], -grad[k]*root2);
+                            task.putaij(N11, leaf.tuples[i].internalIndex[k], -grad[k]/root2);
                         }
                         //N22
                         leaf.tuples[i].d2[1, 1].CopyTo(grad, 0);
@@ -139,7 +139,7 @@ namespace mikity.ghComponents
                             {
                                 grad[k] -= leaf.tuples[i].Gammaijk[1, 1, j] * leaf.tuples[i].d1[j][k];
                             }
-                            task.putaij(N22, leaf.tuples[i].internalIndex[k], -grad[k]*root2);
+                            task.putaij(N22, leaf.tuples[i].internalIndex[k], -grad[k]/root2);
                         }
                         //N12
                         leaf.tuples[i].d2[0, 1].CopyTo(grad, 0);
@@ -153,9 +153,10 @@ namespace mikity.ghComponents
                         }
 
                     }
+                    /*CONE*/
                     for (int i = 0; i < leaf.r; i++)
                     {
-                        int N11 = i * 3 + leaf.nU * leaf.nV; //condition number
+                        int N11 = i * 3 + leaf.nU * leaf.nV; //variable number
                         int N22 = i * 3 + 1 + leaf.nU * leaf.nV;
                         int N12 = i * 3 + 2 + leaf.nU * leaf.nV;
 
@@ -166,19 +167,6 @@ namespace mikity.ghComponents
                                         0.0, // For future use only, can be set to 0.0 
                                         csub);
                     }
-                    /*CONE*/
-                    /*
-                    csub[0] = 3;
-                    csub[1] = 0;
-                    csub[2] = 1;
-                    task.appendcone(mosek.conetype.quad,
-                                    0.0, // For future use only, can be set to 0.0 
-                                    csub);
-                    csub[0] = 4;
-                    csub[1] = 5;
-                    csub[2] = 2;
-                    task.appendcone(mosek.conetype.rquad, 0.0, csub);
-                    */
                     task.putobjsense(mosek.objsense.minimize);
                     task.optimize();
                     // Print a summary containing information
@@ -224,6 +212,24 @@ namespace mikity.ghComponents
                             var P=leaf.srf.Points.GetControlPoint(i,j);
                             leaf.airySrf.Points.SetControlPoint(i, j, new ControlPoint(P.Location.X, P.Location.Y, xx[i + j * leaf.nU]));
                         }
+                    }
+                    for (int j = 0; j < leaf.r; j++)
+                    {
+                        int N11 = j * 3 + leaf.nU * leaf.nV; //variable number
+                        int N22 = j * 3 + 1 + leaf.nU * leaf.nV;
+                        int N12 = j * 3 + 2 + leaf.nU * leaf.nV;
+                        leaf.tuples[j].H[0, 0] = xx[N11]*root2;
+                        leaf.tuples[j].H[1, 1] = xx[N22] * root2;
+                        leaf.tuples[j].H[0, 1] = xx[N12];
+                        leaf.tuples[j].H[1, 0] = xx[N12];
+                        //Hodge star
+                        double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
+                        leaf.tuples[j].SPK[0, 0] = xx[N22] * g * root2;
+                        leaf.tuples[j].SPK[1, 1] = xx[N11] * g * root2;
+                        leaf.tuples[j].SPK[0, 1] = -xx[N12] * g;
+                        leaf.tuples[j].SPK[1, 0] = -xx[N12] * g;
+                        
+                        leaf.tuples[j].computeEigenVectors();
                     }
                 }
             }

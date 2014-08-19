@@ -109,33 +109,19 @@ namespace mikity.ghComponents
         List<Surface> _listSrf;
         List<leaf> listLeaf;
         List<Point3d> a;
-        List<Point3d> a2;
-        List<Point3d> b;
-        List<Point3d> b2;
-        List<Curve> c;
-        List<Point3d> d;
-        List<Point3d> d2;
+        List<Line> crossCyan;
+        List<Line> crossMagenta;
         List<Line> f;
-        List<Point3d> g;
-        List<Point3d> dd;
-        List<Point3d> dd2;
 
         int lastComputed = -1;        
 
         private void init()
         {
             a = new List<Point3d>();
-            a2 = new List<Point3d>();
-            b = new List<Point3d>();
-            b2 = new List<Point3d>();
-            c = new List<Curve>();
-            d = new List<Point3d>();
-            d2 = new List<Point3d>();
             f = new List<Line>();
-            g = new List<Point3d>();
-            dd = new List<Point3d>();
-            dd2 = new List<Point3d>();
             lastComputed = -1;
+            crossCyan = new List<Line>();
+            crossMagenta = new List<Line>();
         }
         public Mothra3()
             : base("Mothra3", "Mothra3", "Mothra3", "Kapybara3D", "Computation")
@@ -250,17 +236,6 @@ namespace mikity.ghComponents
                     leaf.myMasonry.computeGlobalCoord();
                     foreach (var e in leaf.myMasonry.elemList)
                     {
-                        var P = e.getIntPoint(0);
-                        var Q = e.getIntPoint(1);
-                        var R = e.getIntPoint(2);
-                        var W = e.getIntPoint(3);
-                        dd.Add(new Point3d(P[0], P[1], P[2]));
-                        dd.Add(new Point3d(Q[0], Q[1], Q[2]));
-                        dd.Add(new Point3d(R[0], R[1], R[2]));
-                        dd.Add(new Point3d(W[0], W[1], W[2]));
-                    }
-                    foreach (var e in leaf.myMasonry.elemList)
-                    {
                         e.precompute();
                         e.computeBaseVectors();
                     }
@@ -268,9 +243,40 @@ namespace mikity.ghComponents
                     {
                         leaf.myMasonry.elemList[tup.index].precompute(tup);
                     }
+                    //call mosek
                     mosek1(leaf);
                 }
-                //call mosek
+                //For preview
+                crossMagenta.Clear();
+                crossCyan.Clear();
+                foreach (var leaf in listLeaf)
+                {
+                    foreach (var tuple in leaf.tuples)
+                    {
+                        for (int i = 0; i < 2; i++)
+                        {
+                            if (tuple.eigenValues[i] < 0)
+                            {
+                                double s = tuple.eigenValues[i]*0.05;
+                                //double s = 0.1;
+                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0]*s, tuple.y - tuple.eigenVectors[i][1]*s, tuple.z - tuple.eigenVectors[i][2]*s);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0]*s, tuple.y + tuple.eigenVectors[i][1]*s, tuple.z + tuple.eigenVectors[i][2]*s);
+                                Line line = new Line(S, E);
+                                crossCyan.Add(line);
+                            }
+                            else
+                            {
+                                double s = tuple.eigenValues[i]*0.05;
+                                //double s = 0.1;
+                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0]*s, tuple.y + tuple.eigenVectors[i][1]*s, tuple.z + tuple.eigenVectors[i][2]*s);
+                                Line line = new Line(S, E);
+                                crossMagenta.Add(line);
+                            }
+                        }
+                    }
+                }
+
             } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
