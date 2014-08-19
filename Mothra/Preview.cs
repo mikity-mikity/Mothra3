@@ -24,12 +24,22 @@ namespace mikity.ghComponents
             {
                 args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
             }
-            //Mesher edges
-            if (f != null)
+            foreach (var branch in listBranch)
             {
-                foreach (var l in f)
+                switch (branch.branchType)
                 {
-                    args.Display.DrawLine(l, System.Drawing.Color.Bisque);
+                    case Mothra3.branch.type.fix:
+                        args.Display.DrawCurve(branch.crv, System.Drawing.Color.Brown, 2);
+                        break;
+                    case Mothra3.branch.type.reinforce:
+                        args.Display.DrawCurve(branch.crv, System.Drawing.Color.Pink, 2);
+                        break;
+                    case Mothra3.branch.type.kink:
+                        args.Display.DrawCurve(branch.crv, System.Drawing.Color.Purple, 2);
+                        break;
+                    case Mothra3.branch.type.open:
+                        args.Display.DrawCurve(branch.crv, System.Drawing.Color.Green, 2);
+                        break;
                 }
             }
             foreach (var leaf in listLeaf)
@@ -69,11 +79,11 @@ namespace mikity.ghComponents
                     args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Brown, 3);
                 }
             }
-            /*if (a != null)
+            if (a != null)
             {
                 args.Display.DrawPoints(a, Rhino.Display.PointStyle.X, 2, System.Drawing.Color.Blue);
 
-            }*/
+            }
         }
     }
 }

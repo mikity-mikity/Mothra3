@@ -18,6 +18,16 @@ namespace mikity.ghComponents
 {
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public class branch
+        {
+            public NurbsCurve crv;
+            public int varOffset;
+            public enum type
+            {
+                reinforce,open,kink,fix
+            }
+            public type branchType;
+        }
         public class leaf
         {
             public int varOffset;
@@ -29,6 +39,8 @@ namespace mikity.ghComponents
 
             public NurbsSurface srf;
             public NurbsSurface airySrf;
+            public branch top, bottom, left, right;
+            public bool[] flip = new bool[4] { false, false, false, false };
             public Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
             public SparseDoubleArray Laplacian;
             public SparseDoubleArray shiftArray;
@@ -109,18 +121,18 @@ namespace mikity.ghComponents
         }
         ControlBox myControlBox = new ControlBox();
         List<Surface> _listSrf;
+        List<Curve> _listCrv;
         List<leaf> listLeaf;
+        List<branch> listBranch;
         List<Point3d> a;
         List<Line> crossCyan;
         List<Line> crossMagenta;
-        List<Line> f;
 
         int lastComputed = -1;        
 
         private void init()
         {
             a = new List<Point3d>();
-            f = new List<Line>();
             lastComputed = -1;
             crossCyan = new List<Line>();
             crossMagenta = new List<Line>();
@@ -283,12 +295,72 @@ namespace mikity.ghComponents
 
             } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
+
+        public bool findCurve(ref branch target, List<branch> listBranch, NurbsCurve curve)
+        {
+            var Points = curve.Points;
+            var rPoints = curve.Points.Reverse() as Rhino.Geometry.Collections.NurbsCurvePointList;
+
+            foreach (var branch in listBranch)
+            {
+                if (branch.crv.Points[0].Location.DistanceTo(Points[0].Location) < 0.0001)
+                {
+                    if (branch.crv.Points[1].Location.DistanceTo(Points[1].Location) < 0.0001)
+                    {
+                        target = branch;
+                        return false;
+                    }
+                }
+                else if (branch.crv.Points[0].Location.DistanceTo(rPoints[0].Location) < 0.0001)
+                {
+                    if (branch.crv.Points[1].Location.DistanceTo(rPoints[1].Location) < 0.0001)
+                    {
+                        target = branch;
+                        return true;
+                    }
+                }
+            }
+            AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "cannnot find");
+            return false;
+        }
+
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
         {
             init();
             _listSrf = new List<Surface>();
+            _listCrv = new List<Curve>();
+            List<string> types = new List<string>();
             if (!DA.GetDataList(0, _listSrf)) { return; }
+            if (!DA.GetDataList(1, _listCrv)) { return; }
+            if (!DA.GetDataList(2, types)) { return;}
+            
+            if(_listCrv.Count!=types.Count){AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
             listLeaf = new List<leaf>();
+            listBranch = new List<branch>();
+            for (int i = 0; i < _listCrv.Count; i++)
+            {
+                var branch = new branch();
+                branch.crv = _listCrv[i] as NurbsCurve;
+                switch (types[i])
+                {
+                    case "reinforce":
+                        branch.branchType = branch.type.reinforce;
+                        break;
+                    case "kink":
+                        branch.branchType = branch.type.kink;
+                        break;
+                    case "open":
+                        branch.branchType = branch.type.open;
+                        break;
+                    case "fix":
+                        branch.branchType = branch.type.fix;
+                        break;
+                    default:
+                        AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "type should be either of reinforce, kink, fix, or open");
+                        return;
+                }
+                listBranch.Add(branch);
+            }
             myControlBox.setNumF(4);
             myControlBox.setFunctionToCompute(() =>
             {
@@ -329,8 +401,21 @@ namespace mikity.ghComponents
                 int _N = 0;
                 var domainU = leaf.srf.Domain(0);
                 var domainV = leaf.srf.Domain(1);
+                //Find corresponding curve
                 //(0,0)->(1,0)
-                //var curve = leaf.srf.IsoCurve(0, domainV.T0);
+                var curve = leaf.srf.IsoCurve(0, domainV.T0) as NurbsCurve;
+                leaf.flip[0] = findCurve(ref leaf.bottom, listBranch, curve);
+                //(1,0)->(1,1)
+                curve = leaf.srf.IsoCurve(1, domainU.T1) as NurbsCurve;
+                leaf.flip[1] = findCurve(ref leaf.right, listBranch, curve);
+                //(1,1)->(0,1)
+                curve = leaf.srf.IsoCurve(0, domainV.T1) as NurbsCurve;
+                leaf.flip[2] = findCurve(ref leaf.top, listBranch, curve);
+                //(0,1)->(0,0)
+                curve = leaf.srf.IsoCurve(1, domainU.T0) as NurbsCurve;
+                leaf.flip[3] = findCurve(ref leaf.left, listBranch, curve);
+                
+                //(0,0)->(1,0)
                 double u=0, v=0;
                 for (int i = 0; i < nNode-1; i++)
                 {
@@ -341,7 +426,6 @@ namespace mikity.ghComponents
                     input.AddSegment(_N - 1, _N, 1);
                 }
                 //(1,0)->(1,1)
-                //curve = leaf.srf.IsoCurve(1, domainU.T1);
                 for (int i = 0; i < nNode-1; i++)
                 {
                     u = domainU.T1;
@@ -351,7 +435,6 @@ namespace mikity.ghComponents
                     input.AddSegment(_N - 1, _N, 2);
                 }
                 //(1,1)->(0,1)
-                //curve = leaf.srf.IsoCurve(0, domainV.T1);
                 for (int i = 0; i < nNode-1; i++)
                 {
                     u = domainU.T1 + (domainU.T0 - domainU.T1) / (nNode - 1) * i;
@@ -361,7 +444,6 @@ namespace mikity.ghComponents
                     input.AddSegment(_N - 1, _N, 3);
                 }
                 //(0,1)->(0,0)
-                //curve = leaf.srf.IsoCurve(1, domainU.T0);
                 for (int i = 0; i < nNode-1; i++)
                 {
                     u = domainU.T0;
@@ -377,12 +459,7 @@ namespace mikity.ghComponents
                         input.AddSegment(_N - 1, _N, 4);
                     }
                 }
-                foreach (var l in input.Segments)
-                {
-                    var P = input.Points.ElementAt(l.P0);
-                    var Q = input.Points.ElementAt(l.P1);
-                    f.Add(new Line(new Point3d(P.X, P.Y, 0), new Point3d(Q.X, Q.Y, 0)));
-                }
+
                 Mesher.Mesh mesh = new Mesher.Mesh();
                 mesh.Behavior.UseBoundaryMarkers = true;
                 mesh.Behavior.MaxArea = Math.Pow(Math.Min(input.Bounds.Width, input.Bounds.Height) / 10d, 2);
@@ -500,96 +577,6 @@ namespace mikity.ghComponents
                     }
                 }
             }
-/*          for (int i = 0; i < nUelem; i++)
-            {
-                for (int j = 0; j < nVelem; j++)
-                {
-                    Point3d P;
-                    double u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.3);
-                    double v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.3);
-                    P = face.PointAt(u, v);
-                    dd2.Add(P);
-                    u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.7);
-                    v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.3);
-                    P = face.PointAt(u, v);
-                    dd2.Add(P);
-                    u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.3);
-                    v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.7);
-                    P = face.PointAt(u, v);
-                    dd2.Add(P);
-                    u = domU.T0 + (domU.T1 - domU.T0) / nUelem * (i + 0.7);
-                    v = domV.T0 + (domV.T1 - domV.T0) / nVelem * (j + 0.7);
-                    P = face.PointAt(u, v);
-                    dd2.Add(P);
-                }
-            }
-            int nPt = 50;
-            int nPt2 = 30;
-            for (int i = 0; i <= nPt; i++)
-            {
-                double u = domU[0] + (domU[1] - domU[0]) / ((double)nPt) * i;
-                var C = face.TrimAwareIsoCurve(1, u);
-                foreach (var curve in C)
-                {
-                    c.Add(curve);
-                }
-            }
-            for (int i = 0; i <= nPt; i++)
-            {
-                double v = domV[0] + (domV[1] - domV[0]) / ((double)nPt) * i;
-                var D = face.TrimAwareIsoCurve(0, v);
-                foreach (var curve in D)
-                {
-                    c.Add(curve);
-                }
-            }
-            for (int i = 0; i <= nPt; i++)
-            {
-                for (int j = 0; j <= nPt; j++)
-                {
-                    double u = domU[0] + (domU[1] - domU[0]) / ((double)nPt) * i;
-                    double v = domV[0] + (domV[1] - domV[0]) / ((double)nPt) * j;
-                    Point3d P;
-                    Vector3d[] tmp;
-                    var flag=face.Evaluate(u,v,0,out P,out tmp);
-                    var C = face.TrimAwareIsoCurve(0, v);
-                    var D = face.TrimAwareIsoCurve(1, u);
-                    bool flagU=false,flagV=false;
-                    if (C.Length > 0)
-                    {
-                        foreach (var s in C)
-                        {
-                            var domC = s.Domain;
-                            double f;
-                            s.ClosestPoint(P, out f);
-                            var P2=s.PointAt(f);
-                            if((P-P2).Length<0.00000001) flagU = true;
-                        }
-                    }
-                    if (D.Length > 0)
-                    {
-                        foreach (var s in D)
-                        {
-                            var domD = s.Domain;
-                            double f;
-                            s.ClosestPoint(P, out f);
-                            var P2 = s.PointAt(f);
-                            if ((P - P2).Length < 0.00000001) flagV = true;
-                        }
-                    }
-                    if (flagU && flagV)
-                    {
-                        a.Add(P);
-                        a2.Add(new Point3d(u / scaleU - originU / scaleU, v / scaleV - originV / scaleV, 0));
-                    }
-                    else
-                    {
-                        b.Add(P);
-                        b2.Add(new Point3d(u / scaleU - originU / scaleU, v / scaleV - originV / scaleV, 0));
-                    }
-                }
-            }
-*/
         }
     }
 }

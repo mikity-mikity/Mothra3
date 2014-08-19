@@ -22,7 +22,14 @@ namespace Mothra.UI
         public newRadioButton[] radioButtonList;
         public void setNumF(int num)
         {
-            radioButtonList=new newRadioButton[num];
+            if (radioButtonList != null)
+            {
+                foreach (var button in radioButtonList)
+                {
+                    this.wrapPanel1.Children.Remove(button);
+                }
+            }
+            radioButtonList = new newRadioButton[num];
             for (int i = 0; i < num; i++)
             {
                 radioButtonList[i] = new newRadioButton();
