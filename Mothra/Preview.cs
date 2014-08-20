@@ -24,6 +24,13 @@ namespace mikity.ghComponents
             {
                 args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
             }
+            if (planes != null)
+            {
+                foreach (var pl in planes)
+                {
+                    args.Display.DrawPolygon(new Rhino.Geometry.Point3d[]{pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5)},System.Drawing.Color.Azure,true);
+                }
+            }
             foreach (var branch in listBranch)
             {
                 switch (branch.branchType)

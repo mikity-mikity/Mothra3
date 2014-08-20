@@ -27,6 +27,7 @@ namespace mikity.ghComponents
             public int varOffset;
             public int conOffset;
             public int N;
+            public int planeIndex;
             public enum type
             {
                 reinforce,open,kink,fix
@@ -132,6 +133,7 @@ namespace mikity.ghComponents
         List<Point3d> a;
         List<Line> crossCyan;
         List<Line> crossMagenta;
+        List<Plane> planes;
         int lastComputed = -1;        
 
         private void init()
@@ -140,6 +142,7 @@ namespace mikity.ghComponents
             lastComputed = -1;
             crossCyan = new List<Line>();
             crossMagenta = new List<Line>();
+            planes = new List<Plane>();
         }
         public Mothra3()
             : base("Mothra3", "Mothra3", "Mothra3", "Kapybara3D", "Computation")
@@ -343,7 +346,6 @@ namespace mikity.ghComponents
             AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "cannnot find");
             return false;
         }
-
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
         {
             init();
@@ -392,7 +394,49 @@ namespace mikity.ghComponents
                 myControlBox.EnableRadio(lastComputed, (i) => { resultToPreview(i); this.ExpirePreview(true); });
             }
                 );
-
+            var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+            planes.Add(pl1);
+            myControlBox.clearSliders();
+            var slider1=myControlBox.addSlider(0, 1, 100, 0);
+            slider1.Converter = (val) => {
+                planes.Remove(pl1);
+                pl1 = new Plane(new Point3d(0, 0, val / 10d), new Vector3d(0, 0, 1));
+                planes.Add(pl1);
+                this.ExpirePreview(true);
+                return val / 10d;
+            };
+            int ss = 1;
+            
+            foreach (var branch in listBranch)
+            {
+                if (branch.branchType == branch.type.reinforce) branch.planeIndex = 0;
+                if (branch.branchType == branch.type.open)
+                {
+                    branch.planeIndex = ss;
+                    var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+                    planes.Add(plnew);
+                    var slider = myControlBox.addSlider(0, 1, 100, 0);
+                    slider.Converter = (val) =>
+                    {
+                        planes.Remove(plnew);
+                        var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
+                        var V = (branch.crv.Points[1].Location - branch.crv.Points[0].Location);
+                        var X = branch.crv.Points[branch.N - 1].Location; ;
+                        var Z = new Vector3d(0, 0, 1);
+                        var W = Vector3d.CrossProduct(Z, X - O);
+                        if (V * W < 0) W.Reverse();
+                        Z.Unitize();
+                        W.Unitize();
+                        var theta = val / 100d * Math.PI / 2d;
+                        var Y = O + Z * Math.Cos(theta) + W * Math.Sin(theta);
+                        plnew = new Plane(O, X, Y);
+                        planes.Add(plnew);
+                        this.ExpirePreview(true);
+                        return val / 100d*Math.PI/2d;
+                    };
+                    ss++;
+                }
+            }
             foreach (var srf in _listSrf)
             {
                 var leaf=new leaf();
