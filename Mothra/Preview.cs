@@ -70,20 +70,28 @@ namespace mikity.ghComponents
                         }
                     }
                 }
+                /*
                 if (leaf.result != null)
                 {
                     args.Display.DrawLines(leaf.result, System.Drawing.Color.Yellow);
-                }
+                }*/
                 if (leaf.airySrf != null)
                 {
                     args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Brown, 3);
                 }
             }
+            foreach(var branch in listBranch)
+            {
+                if (branch.airyCrv != null)
+                {
+                    args.Display.DrawCurve(branch.airyCrv, System.Drawing.Color.SeaGreen, 4);
+                }
+            }/*
             if (a != null)
             {
                 args.Display.DrawPoints(a, Rhino.Display.PointStyle.X, 2, System.Drawing.Color.Blue);
 
-            }
+            }*/
         }
     }
 }

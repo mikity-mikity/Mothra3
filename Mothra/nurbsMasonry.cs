@@ -21,7 +21,12 @@ namespace mikity.ghComponents
         public class branch
         {
             public NurbsCurve crv;
+            public NurbsCurve airyCrv;
+            public leaf target = null;
+            public leaf left=null,right=null;
             public int varOffset;
+            public int conOffset;
+            public int N;
             public enum type
             {
                 reinforce,open,kink,fix
@@ -39,7 +44,7 @@ namespace mikity.ghComponents
 
             public NurbsSurface srf;
             public NurbsSurface airySrf;
-            public branch top, bottom, left, right;
+            public branch[] branch=new branch[4];
             public bool[] flip = new bool[4] { false, false, false, false };
             public Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
             public SparseDoubleArray Laplacian;
@@ -127,7 +132,6 @@ namespace mikity.ghComponents
         List<Point3d> a;
         List<Line> crossCyan;
         List<Line> crossMagenta;
-
         int lastComputed = -1;        
 
         private void init()
@@ -261,7 +265,7 @@ namespace mikity.ghComponents
                     }
                 }
                 //call mosek
-                mosek1(listLeaf);
+                mosek1(listLeaf,listBranch);
                 //For preview
                 crossMagenta.Clear();
                 crossCyan.Clear();
@@ -296,7 +300,7 @@ namespace mikity.ghComponents
             } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
 
-        public bool findCurve(ref branch target, List<branch> listBranch, NurbsCurve curve)
+        public bool findCurve(leaf leaf,ref branch target, List<branch> listBranch, NurbsCurve curve)
         {
             var Points = curve.Points;
             var rPoints = curve.Points.Reverse().ToList();
@@ -308,6 +312,14 @@ namespace mikity.ghComponents
                     if (branch.crv.Points[1].Location.DistanceTo(Points[1].Location) < 0.0001)
                     {
                         target = branch;
+                        if (branch.branchType != branch.type.kink)
+                        {
+                            branch.target = leaf;
+                        }
+                        else
+                        {
+                            if (branch.left == null) branch.left = leaf; else branch.right = leaf;
+                        }
                         return false;
                     }
                 }
@@ -316,6 +328,14 @@ namespace mikity.ghComponents
                     if (branch.crv.Points[1].Location.DistanceTo(rPoints[1].Location) < 0.0001)
                     {
                         target = branch;
+                        if (branch.branchType != branch.type.kink)
+                        {
+                            branch.target = leaf;
+                        }
+                        else
+                        {
+                            if (branch.left == null) branch.left = leaf; else branch.right = leaf;
+                        }
                         return true;
                     }
                 }
@@ -341,6 +361,7 @@ namespace mikity.ghComponents
             {
                 var branch = new branch();
                 branch.crv = _listCrv[i] as NurbsCurve;
+                branch.N = branch.crv.Points.Count;
                 switch (types[i])
                 {
                     case "reinforce":
@@ -404,16 +425,16 @@ namespace mikity.ghComponents
                 //Find corresponding curve
                 //(0,0)->(1,0)
                 var curve = leaf.srf.IsoCurve(0, domainV.T0) as NurbsCurve;
-                leaf.flip[0] = findCurve(ref leaf.bottom, listBranch, curve);
+                leaf.flip[0] = findCurve(leaf,ref leaf.branch[0], listBranch, curve);
                 //(1,0)->(1,1)
                 curve = leaf.srf.IsoCurve(1, domainU.T1) as NurbsCurve;
-                leaf.flip[1] = findCurve(ref leaf.right, listBranch, curve);
+                leaf.flip[1] = findCurve(leaf, ref leaf.branch[1], listBranch, curve);
                 //(1,1)->(0,1)
                 curve = leaf.srf.IsoCurve(0, domainV.T1) as NurbsCurve;
-                leaf.flip[2] = findCurve(ref leaf.top, listBranch, curve);
+                leaf.flip[2] = findCurve(leaf, ref leaf.branch[2], listBranch, curve);
                 //(0,1)->(0,0)
                 curve = leaf.srf.IsoCurve(1, domainU.T0) as NurbsCurve;
-                leaf.flip[3] = findCurve(ref leaf.left, listBranch, curve);
+                leaf.flip[3] = findCurve(leaf, ref leaf.branch[3], listBranch, curve);
                 
                 //(0,0)->(1,0)
                 double u=0, v=0;

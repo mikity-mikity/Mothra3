@@ -10,10 +10,13 @@ namespace mikity.ghComponents
     {
         public override void BakeGeometry(Rhino.RhinoDoc doc, Rhino.DocObjects.ObjectAttributes att, List<Guid> obj_ids)
         {
-            //Rhino.DocObjects.ObjectAttributes a2 = att.Duplicate();
-            //a2.LayerIndex = 1;
-            //Guid id = doc.Objects.AddMesh(gmesh, a2);
-            //obj_ids.Add(id);
+            Rhino.DocObjects.ObjectAttributes a2 = att.Duplicate();
+            a2.LayerIndex = 1;
+            foreach(var leaf in listLeaf)
+            {
+                Guid id = doc.Objects.AddSurface(leaf.airySrf, a2);
+                obj_ids.Add(id);
+            }
         }
     }
 }
