@@ -452,6 +452,7 @@ namespace mikity.ghComponents
                                 }
                             }
                         }
+                        var ps = new List<Point3d>();
                         for (int j = 0; j < leaf.r; j++)
                         {
                             double x, y, z;
@@ -462,7 +463,9 @@ namespace mikity.ghComponents
                             {
                                 z += leaf.airySrf[s].PointAt(leaf.tuples[j].u, leaf.tuples[j].v).Z * leaf.tuples[j].nf[s];
                             }
-                            a.Add(new Point3d(x, y, z));
+                            var P=new Point3d(x, y, z);
+                            a.Add(P);
+                            ps.Add(P);
                             int N11 = j * 3 + (leaf.nU * leaf.nV * 4); //variable number
                             int N22 = j * 3 + 1 + (leaf.nU * leaf.nV * 4);
                             int N12 = j * 3 + 2 + (leaf.nU * leaf.nV * 4);
@@ -471,7 +474,7 @@ namespace mikity.ghComponents
                             leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
                             leaf.tuples[j].H[1, 0] = xx[N12 + leaf.varOffset];
                             //Hodge star
-                            double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv*0.1;
+                            double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
                             leaf.tuples[j].SPK[0, 0] = xx[N22 + leaf.varOffset] * g * root2;
                             leaf.tuples[j].SPK[1, 1] = xx[N11 + leaf.varOffset] * g * root2;
                             leaf.tuples[j].SPK[0, 1] = -xx[N12 + leaf.varOffset] * g;
@@ -479,13 +482,14 @@ namespace mikity.ghComponents
 
                             leaf.tuples[j].computeEigenVectors();
                         }
+                        leaf.airySrfCombined = NurbsSurface.CreateFromPoints(ps, leaf.nVelem * leaf.NN, leaf.nUelem * leaf.NN,4, 4);
                     }
                 }
             }
         }
 
     
-        private static double epsilon = 0.2;
+        /*private static double epsilon = 0.2;
         Func<double, double, double, double, double> F = (x1, x2, y1, y2) => { return Math.Sqrt(1 + epsilon * (((x1 - x2) * (x1 - x2)) + ((y1 - y2) * (y1 - y2)))); };
         Action<double, double, double, double, double[]> dF = (x1, x2, y1, y2, grad) =>
         {
@@ -506,7 +510,8 @@ namespace mikity.ghComponents
                 computeBaseFunction1(lastComputed);
             }
         }
-
+        */
+        /*
         private void computeBaseFunctionCommon(int lastComputed, DoubleArray origX, leaf leaf)
         {
             var M = (leaf.shiftArray.T.Multiply(leaf.Laplacian) as SparseDoubleArray) * leaf.shiftArray as SparseDoubleArray;
@@ -597,8 +602,8 @@ namespace mikity.ghComponents
                     val[1, 1] += leaf.coeff[lastComputed][j, 0] * r[1, 1];
                 }
             };
-        }
-        private void computeBaseFunction1(int lastComputed)
+        }*/
+        /*private void computeBaseFunction1(int lastComputed)
         {
             foreach (var leaf in listLeaf)
             {
@@ -626,28 +631,8 @@ namespace mikity.ghComponents
                 computeBaseFunctionCommon(lastComputed, origX,leaf);
             }
             if (lastComputed == 0) resultToPreview(0);
-        }
-        public void resultToPreview(int num)
-        {
-            /*a = new List<Point3d>();
-            foreach (var leaf in listLeaf)
-            {
-                if (leaf.baseFunction[num] == null) { return; }
-                var xx = leaf.baseFunction[num];
-                leaf.result = new List<Line>();
-                foreach (var edge in leaf.edges)
-                {
-                    Rhino.Geometry.Point3d P = new Rhino.Geometry.Point3d(leaf.vertices[edge.P0].X, leaf.vertices[edge.P0].Y, xx[edge.P0]);
-                    Rhino.Geometry.Point3d Q = new Rhino.Geometry.Point3d(leaf.vertices[edge.P1].X, leaf.vertices[edge.P1].Y, xx[edge.P1]);
-                    leaf.result.Add(new Rhino.Geometry.Line(P, Q));
-                }
-                foreach (var V in leaf.vertices)
-                {
-                    var P = leaf.srf.PointAt(V.X * leaf.scaleU + leaf.originU, V.Y * leaf.scaleV + leaf.originV);
-                    a.Add(new Point3d(P.X,P.Y,leaf.Function[num](V.X,V.Y)));
-                }
-            }*/
-        }
+        }*/
+        /*
         public SparseDoubleArray computeLaplacian(int[,] lines, int nP)
         {
             if (lines.GetLength(1) != 2) return null;
@@ -663,6 +648,8 @@ namespace mikity.ghComponents
             SparseDoubleArray D = (C.T * C) as SparseDoubleArray;
             return D;
         }
+         * */
+        /*
         public SparseDoubleArray computeShiftArray(List<int> fixedPoints,int n)
         {
             int[] shift = new int[n];
@@ -694,5 +681,6 @@ namespace mikity.ghComponents
             }
             return shiftArray;
         }
+         * */
     }
 }

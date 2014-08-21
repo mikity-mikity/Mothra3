@@ -19,12 +19,12 @@ namespace Minilla3D.Elements
 
             public double ou, ov, u, v;   //scaled coordinate, coordinate on Rhino, local coordinate on an element
             public double[] lo;
-            public double[] f;
+            //public double[] f;
             public double[,][] d2;
             public double[][] d1;
             public double[] d0;
-            public double[][] df;
-            public double[][,] ddf;
+            //public double[][] df;
+            //public double[][,] ddf;
             public double[] nf;
             public double[][] ndf;
             public double[][,] nddf;
@@ -175,18 +175,18 @@ namespace Minilla3D.Elements
 
                 index = _index;
                 area = _area;
-                f = new double[N];
-                df = new double[N][];
-                ddf = new double[N][,];
+                //f = new double[N];
+                //df = new double[N][];
+                //ddf = new double[N][,];
                 nf = new double[N];
                 ndf = new double[N][];
                 nddf = new double[N][,];
                 kernel = new double[N, N];
                 for (int i = 0; i < N; i++)
                 {
-                    df[i] = new double[2];
+                    //df[i] = new double[2];
                     ndf[i] = new double[2];
-                    ddf[i] = new double[2, 2];
+                    //ddf[i] = new double[2, 2];
                     nddf[i] = new double[2, 2];
                 }
                 x = 0;

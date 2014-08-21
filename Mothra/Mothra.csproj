@@ -97,9 +97,9 @@
       <Project>{9e51a541-9813-42a6-bec3-ae7cf3e85b8a}</Project>
       <Name>Minilla3D</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Mesher\Mesher.csproj">
-      <Project>{e5d10ad9-6103-44ba-9c1f-c92d48f77bb9}</Project>
-      <Name>Mesher</Name>
+    <ProjectReference Include="..\MyMath\MyMath.csproj">
+      <Project>{f4f22c1d-3eaa-455b-9461-aea206b44208}</Project>
+      <Name>MyMath</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
@@ -204,6 +204,7 @@
   <PropertyGroup>
     <PostBuildEvent>Copy "$(TargetDir)Mothra.dll" "$(TargetDir)merge\Mothra.gha"
 Copy "$(TargetDir)Minilla3D.dll" "$(TargetDir)merge\"
+Copy "$(TargetDir)MyMath.dll" "$(TargetDir)merge\"
 Copy "$(TargetDir)Mesher.dll" "$(TargetDir)merge\"
 Copy "$(TargetDir)MothraUI.dll" "$(TargetDir)merge\"
 Copy "$(TargetDir)mosek*.*" "$(TargetDir)merge\"
