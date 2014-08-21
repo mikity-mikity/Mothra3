@@ -231,8 +231,9 @@ namespace mikity.ghComponents
                         //compute normalized base function
                         for (int s = 0; s < N; s++)
                         {
-                            leaf.tuples[i].nf[s] = leaf.tuples[i].f[s] / norm;
-                            if (s == 1) leaf.tuples[i].nf[s] = 1; else leaf.tuples[i].nf[s] = 0;
+                            leaf.tuples[i].nf[s] = 0.25;// leaf.tuples[i].f[s] / norm;
+                            //if (s == 1) leaf.tuples[i].nf[s] = 1; else leaf.tuples[i].nf[s] = 0;
+
                         }
                         // compute normalized first derivative
                         for (int v = 0; v < 2; v++)
@@ -261,7 +262,7 @@ namespace mikity.ghComponents
                                         val += leaf.tuples[i].ddf[s][v, w] * leaf.tuples[i].kernel[s, t] / norm;
                                         val -= 3 * leaf.tuples[i].df[s][v] * leaf.tuples[i].df[s][w] * leaf.tuples[i].kernel[s, t] / norm / squaredLength;
                                     }
-                                    leaf.tuples[i].nddf[s][v, w] = 0;//val;
+                                    leaf.tuples[i].nddf[s][v, w] = 0;// val;
                                 }
                             }
                         }
