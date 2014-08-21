@@ -47,6 +47,10 @@ namespace mikity.ghComponents
                 {
                     numcon += 2 * branch.N;
                 }
+                else if (branch.branchType == branch.type.reinforce || branch.branchType == branch.type.open)
+                {
+                    numcon += 1 * branch.N;
+                }
                 else
                 {
                     numcon += 1 * branch.N;
@@ -59,15 +63,16 @@ namespace mikity.ghComponents
             double[] bux = new double[numvar];
             foreach (var leaf in _listLeaf)
             {
+                //z
                 for (int i = 0; i < leaf.nU * leaf.nV; i++)
                 {
                     bkx[i+leaf.varOffset] = mosek.boundkey.fr;
                     blx[i + leaf.varOffset] = -infinity;
                     bux[i + leaf.varOffset] = infinity;
                 }
-                int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
-                int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
-                foreach (int i in fxP)
+                //int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
+                //int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
+                /*foreach (int i in fxP)
                 {
                     bkx[i + leaf.varOffset] = mosek.boundkey.fx;
                     blx[i + leaf.varOffset] = 0;
@@ -76,6 +81,8 @@ namespace mikity.ghComponents
                 bkx[centerP + leaf.varOffset] = mosek.boundkey.fx;
                 blx[centerP + leaf.varOffset] = 10;
                 bux[centerP + leaf.varOffset] = 10;
+                */
+                //H11,H22,H12
                 for (int i = 0; i < leaf.r; i++)
                 {
                     int n = i * 3 + leaf.nU * leaf.nV;
@@ -92,11 +99,61 @@ namespace mikity.ghComponents
             }
             foreach(var branch in _listBranch)
             {
-                for (int i = 0; i < branch.N; i++)
+                if (branch.branchType == branch.type.reinforce )
                 {
-                    bkx[i + branch.varOffset] = mosek.boundkey.fr;
-                    blx[i + branch.varOffset] = -infinity;
-                    bux[i + branch.varOffset] = infinity;
+                    double A, B, C, D;
+                    var vars = branch.slice.pl.GetPlaneEquation();
+                    A = vars[0];
+                    B = vars[1];
+                    C = vars[2];
+                    D = vars[3];
+                    //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        if (i == 0 || i == branch.N - 1)
+                        {
+                            bkx[i + branch.varOffset] = mosek.boundkey.fx;
+                            double x = branch.crv.Points[i].Location.X;
+                            double y = branch.crv.Points[i].Location.Y;
+                            double z = (-D - A * x - B * y) / C;
+                            blx[i + branch.varOffset] = z;
+                            bux[i + branch.varOffset] = z;
+                        }
+                        else
+                        {
+                            bkx[i + branch.varOffset] = mosek.boundkey.fr;
+                            blx[i + branch.varOffset] = -infinity;
+                            bux[i + branch.varOffset] = infinity;
+                        }
+                    }
+                }
+                else if (branch.branchType == branch.type.open)
+                    {
+                        double A, B, C, D;
+                        var vars = branch.slice.pl.GetPlaneEquation();
+                        A = vars[0];
+                        B = vars[1];
+                        C = vars[2];
+                        D = vars[3];
+                        //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
+                        for (int i = 0; i < branch.N; i++)
+                        {
+                            bkx[i + branch.varOffset] = mosek.boundkey.fx;
+                            double x = branch.crv.Points[i].Location.X;
+                            double y = branch.crv.Points[i].Location.Y;
+                            double z = (-D - A * x - B * y) / C;
+                            blx[i + branch.varOffset] = z;
+                            bux[i + branch.varOffset] = z;
+                        }
+                    }
+                    else
+                    {
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        bkx[i + branch.varOffset] = mosek.boundkey.fr;
+                        blx[i + branch.varOffset] = -infinity;
+                        bux[i + branch.varOffset] = infinity;
+                    }
                 }
             }
 

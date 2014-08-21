@@ -24,10 +24,11 @@ namespace mikity.ghComponents
             {
                 args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
             }
-            if (planes != null)
+            if (listSlice != null)
             {
-                foreach (var pl in planes)
+                foreach (var slice in listSlice)
                 {
+                    var pl = slice.pl;
                     args.Display.DrawPolygon(new Rhino.Geometry.Point3d[]{pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5)},System.Drawing.Color.Azure,true);
                 }
             }
