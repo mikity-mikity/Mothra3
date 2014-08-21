@@ -23,6 +23,103 @@ namespace mikity.ghComponents
 
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public void tieBranch(branch branch,leaf leaf,mosek.Task task,int num0/*1 or 2*/,int num1/*0 or 1*/)
+        {
+            if (leaf.branch[0] == branch)
+            {
+                if (leaf.nU == branch.N)
+                {
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        for (int s = 0; s < 4; s++)
+                        {
+                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                            if (leaf.flip[0])
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                            else
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                        }
+                    }
+                }
+            }
+            if (leaf.branch[1] == branch)
+            {
+                if (leaf.nV == branch.N)
+                {
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        for (int s = 0; s < 4; s++)
+                        {
+                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                            if (leaf.flip[1])
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (branch.N - i) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                            else
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (i + 1) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                        }
+                    }
+                }
+            }
+            if (leaf.branch[2] == branch)
+            {
+                if (leaf.nU == branch.N)
+                {
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        for (int s = 0; s < 4; s++)
+                        {
+                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                            if (leaf.flip[2])
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (leaf.nV - 1) + (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                            else
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (leaf.nV - 1) + i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (leaf.branch[3] == branch)
+            {
+                if (leaf.nV == branch.N)
+                {
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        for (int s = 0; s < 4; s++)
+                        {
+                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                            if (leaf.flip[3])
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                            else
+                            {
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
         public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch)
         {
             // Since the value infinity is never used, we define
@@ -45,15 +142,15 @@ namespace mikity.ghComponents
                 numvar += branch.N;
                 if (branch.branchType == branch.type.kink)
                 {
-                    numcon += 2 * branch.N;
+                    numcon += 2 * branch.N * 4;
                 }
                 else if (branch.branchType == branch.type.reinforce || branch.branchType == branch.type.open)
                 {
-                    numcon += 1 * branch.N;
+                    numcon += 1 * branch.N * 4;
                 }
                 else
                 {
-                    numcon += 1 * branch.N;
+                    numcon += 1 * branch.N * 4;
                 }
             }
 
@@ -273,91 +370,11 @@ namespace mikity.ghComponents
                         {
                             if (branch.branchType == branch.type.kink)
                             {
-
-                                if (branch.left.branch[0] == branch)
-                                {
-                                    if (branch.left.nU == branch.N)
-                                    {
-                                        for (int i = 0; i < branch.N; i++)
-                                        {
-                                            task.putconbound(i*2 + branch.conOffset, mosek.boundkey.fx, 0, 0);
-                                            if (branch.left.flip[0])
-                                            {
-                                                task.putaij(branch.conOffset + i * 2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i * 2, (branch.N - 1 - i) + branch.left.varOffset, -1);
-                                            }
-                                            else
-                                            {
-                                                task.putaij(branch.conOffset + i * 2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i * 2, i + branch.left.varOffset, -1);
-                                            }
-                                        }
-                                    }
-                                }
-                                if (branch.left.branch[1] == branch)
-                                {
-                                    if (branch.left.nV == branch.N)
-                                    {
-                                        for (int i = 0; i < branch.N; i++)
-                                        {
-                                            task.putconbound(i*2 + branch.conOffset, mosek.boundkey.fx, 0, 0);
-                                            if (branch.left.flip[1])
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * (branch.N - i) - 1 + branch.left.varOffset, -1);
-                                            }
-                                            else
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * (i + 1) - 1 + branch.left.varOffset, -1);
-                                            }
-                                        }
-                                    }
-                                }
-                                if (branch.left.branch[2] == branch)
-                                {
-                                    if (branch.left.nU == branch.N)
-                                    {
-                                        for (int i = 0; i < branch.N; i++)
-                                        {
-                                            task.putconbound(i*2 + branch.conOffset, mosek.boundkey.fx, 0, 0);
-                                            if (branch.left.flip[2])
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * (branch.left.nV - 1) + (branch.N - 1 - i) + branch.left.varOffset, -1);
-                                            }
-                                            else
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * (branch.left.nV - 1) + i + branch.left.varOffset, -1);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-                                if (branch.left.branch[3] == branch)
-                                {
-                                    if (branch.left.nV == branch.N)
-                                    {
-                                        for (int i = 0; i < branch.N; i++)
-                                        {
-                                            task.putconbound(i*2 + branch.conOffset, mosek.boundkey.fx, 0, 0);
-                                            if (branch.left.flip[3])
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * (branch.N - 1 - i) + branch.left.varOffset, -1);
-                                            }
-                                            else
-                                            {
-                                                task.putaij(branch.conOffset + i*2, i + branch.varOffset, 1);
-                                                task.putaij(branch.conOffset + i*2, branch.left.nU * i + branch.left.varOffset, -1);
-                                            }
-                                        }
-                                    }
-                                }
+                                tieBranch(branch, branch.left, task, 2, 0);
+                                tieBranch(branch, branch.right, task, 2, 1);
                                 
 
-                                if (branch.right.branch[0] == branch)
+/*                                if (branch.right.branch[0] == branch)
                                 {
                                     if (branch.right.nU == branch.N)
                                     {
@@ -440,11 +457,13 @@ namespace mikity.ghComponents
                                             }
                                         }
                                     }
-                                }
+                                }*/
                             }
                             else
                             {
-                                if (branch.target.branch[0] == branch)
+                                tieBranch(branch, branch.target, task, 1, 0);
+
+                              /*  if (branch.target.branch[0] == branch)
                                 {
                                     if (branch.target.nU == branch.N)
                                     {
@@ -523,7 +542,7 @@ namespace mikity.ghComponents
                                             }
                                         }
                                     }
-                                }
+                                }*/
                             }
                         }
                         /*CONE*/
