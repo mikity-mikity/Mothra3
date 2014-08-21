@@ -54,8 +54,8 @@ namespace mikity.ghComponents
             {
                 if (leaf.airySrf[currentAiry] != null)
                 {
-                    //args.Display.DrawSurface(leaf.airySrf[currentAiry], System.Drawing.Color.Brown, 3);
-                    args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
+                    args.Display.DrawSurface(leaf.airySrf[currentAiry], System.Drawing.Color.Brown, 3);
+                    //args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
                 }
             }
             foreach(var branch in listBranch)

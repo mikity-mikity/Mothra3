@@ -189,10 +189,14 @@ namespace mikity.ghComponents
                     leaf.NN = 4;
                     double area = 1d / ((double)leaf.NN) / ((double)leaf.NN);
                     //setup functions
+                    /*bottom*/
                     var _f1 = new My.Lambda((u, v,u0,v0) => u * (u - u0) * (v + v0) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    var _f2 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    var _f3 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    var _f4 = new My.Lambda((u, v, u0, v0) => u * (u - 2 * u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*right*/
+                    var _f2 = new My.Lambda((u, v, u0, v0) => u * (u - 2 * u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*top*/
+                    var _f3 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*left*/
+                    var _f4 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     var f1 = (Func<double, double, double, double, double>)_f1.Compile();
                     var f2 = (Func<double, double, double, double, double>)_f2.Compile();
                     var f3 = (Func<double, double, double, double, double>)_f3.Compile();
@@ -274,15 +278,7 @@ namespace mikity.ghComponents
                             {
                                 leaf.tuples[num].nf[s]=leaf.Function[s](centerU, centerV);
                                 leaf.dFunction[s](centerU, centerV, leaf.tuples[num].ndf[s]);
-                                leaf.ddFunction[s](centerU, centerV, leaf.tuples[num].nddf[s]);
-                                
-                                /*leaf.tuples[num].nf[s] = 0.25;
-                                leaf.tuples[num].ndf[s][0]=0;
-                                leaf.tuples[num].ndf[s][1]=0;
-                                leaf.tuples[num].nddf[s][0, 0] = 0;
-                                leaf.tuples[num].nddf[s][0, 1] = 0;
-                                leaf.tuples[num].nddf[s][1, 0] = 0;
-                                leaf.tuples[num].nddf[s][1, 1] = 0;*/
+                                leaf.ddFunction[s](centerU, centerV, leaf.tuples[num].nddf[s]);                                
                             }
                         }
                     }
@@ -523,16 +519,16 @@ namespace mikity.ghComponents
                 //Find corresponding curve
                 //(0,0)->(1,0)
                 var curve = leaf.srf.IsoCurve(0, domainV.T0) as NurbsCurve;
-                leaf.flip[0] = findCurve(leaf,ref leaf.branch[0], listBranch, curve);
+                leaf.flip[0] = findCurve(leaf,ref leaf.branch[0], listBranch, curve);//bottom
                 //(1,0)->(1,1)
                 curve = leaf.srf.IsoCurve(1, domainU.T1) as NurbsCurve;
-                leaf.flip[1] = findCurve(leaf, ref leaf.branch[1], listBranch, curve);
+                leaf.flip[1] = findCurve(leaf, ref leaf.branch[1], listBranch, curve);//right
                 //(1,1)->(0,1)
                 curve = leaf.srf.IsoCurve(0, domainV.T1) as NurbsCurve;
-                leaf.flip[2] = findCurve(leaf, ref leaf.branch[2], listBranch, curve);
+                leaf.flip[2] = findCurve(leaf, ref leaf.branch[2], listBranch, curve);//top
                 //(0,1)->(0,0)
                 curve = leaf.srf.IsoCurve(1, domainU.T0) as NurbsCurve;
-                leaf.flip[3] = findCurve(leaf, ref leaf.branch[3], listBranch, curve);
+                leaf.flip[3] = findCurve(leaf, ref leaf.branch[3], listBranch, curve);//left
                 
                 /*
                 //(0,0)->(1,0)

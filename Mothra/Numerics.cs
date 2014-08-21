@@ -31,20 +31,21 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        for (int s = 0; s < 4; s++)
-                        {
-                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                        int s=0;
+                        //for (int s = 0; s < 4; s++)
+                        //{
+                            task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
                             if (leaf.flip[0])
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
                             else
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
-                        }
+                        //}
                     }
                 }
             }
@@ -54,20 +55,21 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        for (int s = 0; s < 4; s++)
-                        {
-                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                        int s = 1;
+                        //for (int s = 0; s < 4; s++)
+                        //{
+                            task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
                             if (leaf.flip[1])
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (branch.N - i) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * (branch.N - i) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
                             else
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (i + 1) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * (i + 1) - 1 + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
-                        }
+                        //}
                     }
                 }
             }
@@ -77,20 +79,21 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        for (int s = 0; s < 4; s++)
-                        {
-                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                        int s = 2;
+                        //for (int s = 0; s < 4; s++)
+                        //{
+                            task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
                             if (leaf.flip[2])
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (leaf.nV - 1) + (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * (leaf.nV - 1) + (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
                             else
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (leaf.nV - 1) + i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * (leaf.nV - 1) + i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
-                        }
+                        //}
                     }
                 }
             }
@@ -101,20 +104,21 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        for (int s = 0; s < 4; s++)
-                        {
-                            task.putconbound(i * num0 + num1 + branch.conOffset + s * branch.N * num0, mosek.boundkey.fx, 0, 0);
+                        int s = 3;
+                        //for (int s = 0; s < 4; s++)
+                        //{
+                            task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
                             if (leaf.flip[3])
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * (branch.N - 1 - i) + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
                             else
                             {
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, i + branch.varOffset, 1);
-                                task.putaij(branch.conOffset + i * num0 + num1 + s * branch.N * num0, leaf.nU * i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, i + branch.varOffset, 1);
+                                task.putaij(branch.conOffset + i * num0 + num1 /*+ s * branch.N * num0*/, leaf.nU * i + leaf.varOffset + s * leaf.nU * leaf.nV, -1);
                             }
-                        }
+                        //}
                     }
                 }
             }
@@ -142,15 +146,15 @@ namespace mikity.ghComponents
                 numvar += branch.N;
                 if (branch.branchType == branch.type.kink)
                 {
-                    numcon += 2 * branch.N * 4;
+                    numcon += 2 * branch.N ;
                 }
                 else if (branch.branchType == branch.type.reinforce || branch.branchType == branch.type.open)
                 {
-                    numcon += 1 * branch.N * 4;
+                    numcon += 1 * branch.N ;
                 }
                 else
                 {
-                    numcon += 1 * branch.N * 4;
+                    numcon += 1 * branch.N ;
                 }
             }
 
