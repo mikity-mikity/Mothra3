@@ -57,7 +57,7 @@ namespace mikity.ghComponents
             public Minilla3D.Objects.masonry myMasonry;
 
             public NurbsSurface srf;
-            public NurbsSurface airySrf;
+            public NurbsSurface[] airySrf=new NurbsSurface[4];
             public branch[] branch=new branch[4];
             public bool[] flip = new bool[4] { false, false, false, false };
             public Rhino.Geometry.Mesh gmesh = new Rhino.Geometry.Mesh();
@@ -147,8 +147,8 @@ namespace mikity.ghComponents
         List<Line> crossCyan;
         List<Line> crossMagenta;
         List<slice> listSlice;
-        int lastComputed = -1;        
-
+        int lastComputed = -1;
+        int currentAiry = 0;
         private void init()
         {
             a = new List<Point3d>();
@@ -208,6 +208,7 @@ namespace mikity.ghComponents
                         leaf.tuples[i].init(leaf.srf, leaf.scaleU, leaf.scaleV);
                         for (int s = 0; s < N; s++)
                         {
+                            if(s==0)
                             leaf.tuples[i].f[s] = leaf.Function[s](centerU, centerV);
                             leaf.dFunction[s](centerU, centerV, leaf.tuples[i].df[s]);
                             leaf.ddFunction[s](centerU, centerV, leaf.tuples[i].ddf[s]);
@@ -231,6 +232,7 @@ namespace mikity.ghComponents
                         for (int s = 0; s < N; s++)
                         {
                             leaf.tuples[i].nf[s] = leaf.tuples[i].f[s] / norm;
+                            if (s == 1) leaf.tuples[i].nf[s] = 1; else leaf.tuples[i].nf[s] = 0;
                         }
                         // compute normalized first derivative
                         for (int v = 0; v < 2; v++)
@@ -242,7 +244,7 @@ namespace mikity.ghComponents
                                 {
                                     val += leaf.tuples[i].df[s][v] * leaf.tuples[i].kernel[s, t] / norm;
                                 }
-                                leaf.tuples[i].ndf[s][v] = val;
+                                leaf.tuples[i].ndf[s][v] = 0;// val;
                             }
                         }
 
@@ -259,7 +261,7 @@ namespace mikity.ghComponents
                                         val += leaf.tuples[i].ddf[s][v, w] * leaf.tuples[i].kernel[s, t] / norm;
                                         val -= 3 * leaf.tuples[i].df[s][v] * leaf.tuples[i].df[s][w] * leaf.tuples[i].kernel[s, t] / norm / squaredLength;
                                     }
-                                    leaf.tuples[i].nddf[s][v, w] = val;
+                                    leaf.tuples[i].nddf[s][v, w] = 0;//val;
                                 }
                             }
                         }
@@ -404,7 +406,7 @@ namespace mikity.ghComponents
                 lastComputed++;
                 computeBaseFunction(lastComputed);
                 this.ExpirePreview(true);
-                myControlBox.EnableRadio(lastComputed, (i) => { resultToPreview(i); this.ExpirePreview(true); });
+                myControlBox.EnableRadio(lastComputed, (i) => { currentAiry = i; resultToPreview(i); this.ExpirePreview(true); });
             }
                 );
             var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
