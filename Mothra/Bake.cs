@@ -14,8 +14,8 @@ namespace mikity.ghComponents
             a2.LayerIndex = 1;
             foreach(var leaf in listLeaf)
             {
-                //Guid id = doc.Objects.AddSurface(leaf.airySrfCombined, a2);
-                Guid id = doc.Objects.AddSurface(leaf.airySrf[currentAiry], a2);
+                Guid id = doc.Objects.AddSurface(leaf.airySrfCombined, a2);
+                //Guid id = doc.Objects.AddSurface(leaf.airySrf[currentAiry], a2);
                 obj_ids.Add(id);
             }
         }

@@ -124,7 +124,7 @@ namespace mikity.ghComponents
             }
 
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -157,7 +157,13 @@ namespace mikity.ghComponents
                     numcon += 1 * branch.N ;
                 }
             }
-
+            foreach (var node in _listNode)
+            {
+                node.varOffset = numvar;
+                node.conOffset = numcon;
+                numvar++;  //always 1
+                numcon += node.N;  //usually 3
+            }
             //variable settings
             mosek.boundkey[] bkx = new mosek.boundkey[numvar];
             double[] blx = new double[numvar];
@@ -245,7 +251,12 @@ namespace mikity.ghComponents
                     }
                 }
             }
-
+            foreach(var node in _listNode)
+            {
+                bkx[node.varOffset]=mosek.boundkey.fr;
+                blx[node.varOffset] = -infinity;
+                bux[node.varOffset] = infinity;
+            }
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
             {
@@ -272,6 +283,7 @@ namespace mikity.ghComponents
                                blx[j] <= x_j <= bux[j] */
                         task.putvarbound(j, bkx[j], blx[j], bux[j]);
                     }
+                    //task.putqobjij
                     double root2 = Math.Sqrt(2);
                     foreach (var leaf in listLeaf)
                     {
@@ -370,18 +382,6 @@ namespace mikity.ghComponents
                             }
 
                         }
-                        foreach (var branch in _listBranch)
-                        {
-                            if (branch.branchType == branch.type.kink)
-                            {
-                                tieBranch(branch, branch.left, task, 2, 0);
-                                tieBranch(branch, branch.right, task, 2, 1);
-                            }
-                            else
-                            {
-                                tieBranch(branch, branch.target, task, 1, 0);
-                            }
-                        }
                         /*CONE*/
                         for (int i = 0; i < leaf.r; i++)
                         {
@@ -395,6 +395,27 @@ namespace mikity.ghComponents
                             task.appendcone(mosek.conetype.rquad,
                                             0.0, // For future use only, can be set to 0.0 
                                             csub);
+                        }
+                    }
+                    foreach (var branch in _listBranch)
+                    {
+                        if (branch.branchType == branch.type.kink)
+                        {
+                            tieBranch(branch, branch.left, task, 2, 0);
+                            tieBranch(branch, branch.right, task, 2, 1);
+                        }
+                        else
+                        {
+                            tieBranch(branch, branch.target, task, 1, 0);
+                        }
+                    }
+                    foreach (var node in _listNode)
+                    {
+                        for (int i = 0; i < node.N; i++)
+                        {
+                            task.putconbound(node.conOffset + i, mosek.boundkey.fx, 0, 0);
+                            task.putaij(node.conOffset + i, node.varOffset, -1);
+                            task.putaij(node.conOffset + i, node.share[i].varOffset+node.number[i], 1);
                         }
                     }
                     task.putobjsense(mosek.objsense.minimize);

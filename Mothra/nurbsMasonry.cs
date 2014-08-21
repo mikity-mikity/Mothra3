@@ -16,6 +16,29 @@ namespace mikity.ghComponents
 {
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public class node
+        {
+            public double x,y,z;
+            public int N;
+            public List<branch> share=new List<branch>();
+            public List<int> number = new List<int>();
+            public int varOffset;
+            public int conOffset;
+            public bool compare(Point3d P)
+            {
+                double dx = P.X - x;
+                double dy = P.Y - y;
+                double dz = P.Z - z;
+                if ((dx * dx + dy * dy + dz * dz) < 0.0000001) return true;
+                return false;
+            }
+            public node()
+            {
+                N = 0;
+                share.Clear();
+                number.Clear();
+            }
+        }
         public class slice
         {
             public Plane pl;
@@ -142,6 +165,7 @@ namespace mikity.ghComponents
         List<Curve> _listCrv;
         List<leaf> listLeaf;
         List<branch> listBranch;
+        List<node> listNode;
         List<Point3d> a;
         List<Point3d> a2;
         List<Line> crossCyan;
@@ -299,7 +323,7 @@ namespace mikity.ghComponents
                     }
                 }
                 //call mosek
-                mosek1(listLeaf,listBranch);
+                mosek1(listLeaf,listBranch,listNode);
                 //For preview
                 crossMagenta.Clear();
                 crossCyan.Clear();
@@ -406,6 +430,7 @@ namespace mikity.ghComponents
             if(_listCrv.Count!=types.Count){AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
             listLeaf = new List<leaf>();
             listBranch = new List<branch>();
+            listNode=new List<node>();
             for (int i = 0; i < _listCrv.Count; i++)
             {
                 var branch = new branch();
@@ -485,6 +510,64 @@ namespace mikity.ghComponents
                         return val / 100d*Math.PI/2d;
                     };
                     ss++;
+                }
+            }
+            // Connect nodes
+            foreach (var node in listNode)
+            {
+                node.N = 0;
+                node.share.Clear();
+                node.number.Clear();
+            }
+            foreach (var branch in listBranch)
+            {
+                var P = branch.crv.Points[0].Location;
+                bool flag = false;
+                foreach (var node in listNode)
+                {
+                    if (node.compare(P))
+                    {
+                        flag = true;
+                        node.N++;
+                        node.share.Add(branch);
+                        node.number.Add(0);
+                        break;
+                    }
+                }
+                if (!flag)
+                {
+                    var newNode=new node();
+                    listNode.Add(newNode);
+                    newNode.N++;
+                    newNode.share.Add(branch);
+                    newNode.number.Add(0);
+                    newNode.x = P.X;
+                    newNode.y = P.Y;
+                    newNode.z = P.Z;
+                }
+                var Q = branch.crv.Points[branch.N - 1].Location;
+                flag = false;
+                foreach (var node in listNode)
+                {
+                    if (node.compare(Q))
+                    {
+                        flag = true;
+                        node.N++;
+                        node.share.Add(branch);
+                        node.number.Add(branch.N-1);
+                        break;
+                    }
+                }
+                if (!flag)
+                {
+                    var newNode = new node();
+                    listNode.Add(newNode);
+                    newNode.N++;
+                    newNode.share.Add(branch);
+                    newNode.number.Add(branch.N-1);
+                    newNode.x = Q.X;
+                    newNode.y = Q.Y;
+                    newNode.z = Q.Z;
                 }
             }
             foreach (var srf in _listSrf)
