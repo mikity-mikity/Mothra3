@@ -211,8 +211,8 @@ namespace mikity.ghComponents
                             double x = branch.crv.Points[i].Location.X;
                             double y = branch.crv.Points[i].Location.Y;
                             double z = (-D - A * x - B * y) / C;
-                            blx[i + branch.varOffset] = z;
-                            bux[i + branch.varOffset] = z;
+                            blx[i + branch.varOffset] =  z;
+                            bux[i + branch.varOffset] =  z;
                         }
                         else
                         {

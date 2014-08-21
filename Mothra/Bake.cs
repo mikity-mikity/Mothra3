@@ -18,6 +18,13 @@ namespace mikity.ghComponents
                 //Guid id = doc.Objects.AddSurface(leaf.airySrf[currentAiry], a2);
                 obj_ids.Add(id);
             }
+            foreach (var branch in listBranch)
+            {
+                Guid id = doc.Objects.AddCurve(branch.airyCrv, a2);
+                //Guid id = doc.Objects.AddSurface(leaf.airySrf[currentAiry], a2);
+                obj_ids.Add(id);
+
+            }
         }
     }
 }
