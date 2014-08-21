@@ -35,8 +35,8 @@ namespace mikity.ghComponents
             {
                 leaf.varOffset = numvar;
                 leaf.conOffset = numcon;
-                numvar += leaf.nU * leaf.nV + leaf.r * 3;
-                numcon += leaf.r * 3;// H11,H22,H12;
+                numvar += (leaf.nU * leaf.nV * 4) + leaf.r * 3;
+                numcon += leaf.r * 3 ;// H11,H22,H12,f1z1+f2z2+f3z3+f4z4=z;
             }
             foreach (var branch in _listBranch)
             {
@@ -64,28 +64,16 @@ namespace mikity.ghComponents
             foreach (var leaf in _listLeaf)
             {
                 //z
-                for (int i = 0; i < leaf.nU * leaf.nV; i++)
+                for (int i = 0; i < leaf.nU * leaf.nV*5; i++)
                 {
                     bkx[i+leaf.varOffset] = mosek.boundkey.fr;
                     blx[i + leaf.varOffset] = -infinity;
                     bux[i + leaf.varOffset] = infinity;
                 }
-                //int[] fxP = { 0, leaf.nU - 1, leaf.nU * leaf.nV - leaf.nU, leaf.nU * leaf.nV - 1 };
-                //int centerP = leaf.nU / 2 + (leaf.nV / 2) * leaf.nU;
-                /*foreach (int i in fxP)
-                {
-                    bkx[i + leaf.varOffset] = mosek.boundkey.fx;
-                    blx[i + leaf.varOffset] = 0;
-                    bux[i + leaf.varOffset] = 0;
-                }
-                bkx[centerP + leaf.varOffset] = mosek.boundkey.fx;
-                blx[centerP + leaf.varOffset] = 10;
-                bux[centerP + leaf.varOffset] = 10;
-                */
                 //H11,H22,H12
                 for (int i = 0; i < leaf.r; i++)
                 {
-                    int n = i * 3 + leaf.nU * leaf.nV;
+                    int n = i * 3 + (leaf.nU * leaf.nV*4);
                     bkx[n + leaf.varOffset] = mosek.boundkey.fr;
                     blx[n + leaf.varOffset] = -infinity;
                     bux[n + leaf.varOffset] = infinity;
@@ -186,13 +174,18 @@ namespace mikity.ghComponents
                     double root2 = Math.Sqrt(2);
                     foreach (var leaf in listLeaf)
                     {
+
+                        double[] grad = new double[leaf.tuples[0].nDV];
+                        double[] grad0 = new double[leaf.tuples[0].nDV];
+                        double[] grad1i = new double[leaf.tuples[0].nDV];
+                        double[] grad1j = new double[leaf.tuples[0].nDV];
                         //define H11,H12,H22
                         for (int i = 0; i < leaf.r; i++)
                         {
                             int N11 = i * 3; //condition number
                             int N22 = i * 3 + 1;
                             int N12 = i * 3 + 2;
-                            int target = i * 3 + leaf.nU * leaf.nV+leaf.varOffset;   //variable numver
+                            int target = i * 3 + (leaf.nU * leaf.nV*4)+leaf.varOffset;   //variable number
                             task.putaij(N11+leaf.conOffset, target, -1);
                             task.putconbound(N11 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
                             task.putaij(N22 + leaf.conOffset, target + 1, -1);
@@ -200,35 +193,67 @@ namespace mikity.ghComponents
                             task.putaij(N12 + leaf.conOffset, target + 2, -1);
                             task.putconbound(N12 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
                             //N11
-                            double[] grad = new double[leaf.tuples[i].nDV];
                             leaf.tuples[i].d2[0, 0].CopyTo(grad, 0);
+                            leaf.tuples[i].d0.CopyTo(grad0, 0);
+                            leaf.tuples[i].d1[0].CopyTo(grad1i, 0);
+                            leaf.tuples[i].d1[0].CopyTo(grad1j, 0);
                             for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
                                 for (int j = 0; j < leaf.tuples[i].elemDim; j++)
                                 {
                                     grad[k] -= leaf.tuples[i].Gammaijk[0, 0, j] * leaf.tuples[i].d1[j][k];
                                 }
-                                task.putaij(N11 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + leaf.varOffset, - grad[k] / root2);
+                                double val=0;
+                                for (int s = 0; s < 4; s++)
+                                {
+                                    val += leaf.tuples[i].f[s] * grad[k];
+                                    val += leaf.tuples[i].ddf[s][0, 0] * grad0[k];
+                                    val += leaf.tuples[i].df[s][0] * grad1j[k];
+                                    val += leaf.tuples[i].df[s][0] * grad1i[k];
+                                    task.putaij(N11 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + (s+1) * (leaf.nU * leaf.nV) + leaf.varOffset, -val / root2);
+                                }
                             }
                             //N22
                             leaf.tuples[i].d2[1, 1].CopyTo(grad, 0);
+                            leaf.tuples[i].d0.CopyTo(grad0, 0);
+                            leaf.tuples[i].d1[1].CopyTo(grad1i, 0);
+                            leaf.tuples[i].d1[1].CopyTo(grad1j, 0);
                             for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
                                 for (int j = 0; j < leaf.tuples[i].elemDim; j++)
                                 {
                                     grad[k] -= leaf.tuples[i].Gammaijk[1, 1, j] * leaf.tuples[i].d1[j][k];
                                 }
-                                task.putaij(N22 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + leaf.varOffset, -grad[k] / root2);
+                                double val = 0;
+                                for (int s = 0; s < 4; s++)
+                                {
+                                    val += leaf.tuples[i].f[s] * grad[k];
+                                    val += leaf.tuples[i].ddf[s][1, 1] * grad0[k];
+                                    val += leaf.tuples[i].df[s][1] * grad1j[k];
+                                    val += leaf.tuples[i].df[s][1] * grad1i[k];
+                                    task.putaij(N22 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + s * (leaf.nU * leaf.nV) + leaf.varOffset, -val/ root2);
+                                }
                             }
                             //N12
                             leaf.tuples[i].d2[0, 1].CopyTo(grad, 0);
+                            leaf.tuples[i].d0.CopyTo(grad0, 0);
+                            leaf.tuples[i].d1[0].CopyTo(grad1i, 0);
+                            leaf.tuples[i].d1[1].CopyTo(grad1j, 0);
                             for (int k = 0; k < leaf.tuples[i].nDV; k++)
                             {
                                 for (int j = 0; j < leaf.tuples[i].elemDim; j++)
                                 {
                                     grad[k] -= leaf.tuples[i].Gammaijk[0, 1, j] * leaf.tuples[i].d1[j][k];
                                 }
-                                task.putaij(N12 + leaf.conOffset, leaf.tuples[i].internalIndex[k]+leaf.varOffset, -grad[k]);
+                                double val = 0;
+                                for (int s = 0; s < 4; s++)
+                                {
+                                    val += leaf.tuples[i].f[s] * grad[k];
+                                    val += leaf.tuples[i].ddf[s][0, 1] * grad0[k];
+                                    val += leaf.tuples[i].df[s][0] * grad1j[k];
+                                    val += leaf.tuples[i].df[s][1] * grad1i[k];
+                                    task.putaij(N12 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + s * (leaf.nU * leaf.nV) + leaf.varOffset, -val);
+                                }
                             }
 
                         }
@@ -492,9 +517,9 @@ namespace mikity.ghComponents
                         /*CONE*/
                         for (int i = 0; i < leaf.r; i++)
                         {
-                            int N11 = i * 3 + leaf.nU * leaf.nV; //variable number
-                            int N22 = i * 3 + 1 + leaf.nU * leaf.nV;
-                            int N12 = i * 3 + 2 + leaf.nU * leaf.nV;
+                            int N11 = i * 3 + (leaf.nU * leaf.nV*4); //variable number
+                            int N22 = i * 3 + 1 + (leaf.nU * leaf.nV*4);
+                            int N12 = i * 3 + 2 + (leaf.nU * leaf.nV*4);
 
                             csub[0] = N11 + leaf.varOffset;
                             csub[1] = N22 + leaf.varOffset;
@@ -561,9 +586,9 @@ namespace mikity.ghComponents
                         }
                         for (int j = 0; j < leaf.r; j++)
                         {
-                            int N11 = j * 3 + leaf.nU * leaf.nV; //variable number
-                            int N22 = j * 3 + 1 + leaf.nU * leaf.nV;
-                            int N12 = j * 3 + 2 + leaf.nU * leaf.nV;
+                            int N11 = j * 3 + (leaf.nU * leaf.nV * 4); //variable number
+                            int N22 = j * 3 + 1 + (leaf.nU * leaf.nV * 4);
+                            int N12 = j * 3 + 2 + (leaf.nU * leaf.nV * 4);
                             leaf.tuples[j].H[0, 0] = xx[N11+leaf.varOffset] * root2;
                             leaf.tuples[j].H[1, 1] = xx[N22 + leaf.varOffset] * root2;
                             leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
