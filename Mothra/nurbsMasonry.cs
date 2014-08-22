@@ -401,22 +401,6 @@ namespace mikity.ghComponents
             AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "cannnot find");
             return false;
         }
-        public void resultToPreview(int i)
-        {
-            a2.Clear();
-            foreach(var leaf in listLeaf)
-            {
-                foreach (var tuple in leaf.tuples)
-                {
-                    double x, y, z;
-                    x = tuple.ou+30;
-                    y = tuple.ov;
-                    z = tuple.nf[i];
-                    var P = new Point3d(x, y, z);
-                    a2.Add(P);
-                }
-            }
-        }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
         {
             init();
@@ -456,11 +440,11 @@ namespace mikity.ghComponents
                 }
                 listBranch.Add(branch);
             }
-            myControlBox.setNumF(4);
+            myControlBox.setNumF(5);
             lastComputed = 3;
-            for (int s = 0; s < 4; s++)
+            for (int s = 0; s < 5; s++)
             {
-                myControlBox.EnableRadio(s, (i) => { currentAiry = i; resultToPreview(i); this.ExpirePreview(true); });
+                myControlBox.EnableRadio(s, (i) => { currentAiry = i; this.ExpirePreview(true); });
             }
 /*            myControlBox.setFunctionToCompute(() =>
             {

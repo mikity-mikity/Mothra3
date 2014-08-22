@@ -148,9 +148,12 @@ namespace mikity.ghComponents
                 {
                     numcon += 2 * branch.N ;
                 }
-                else if (branch.branchType == branch.type.reinforce || branch.branchType == branch.type.open)
+                else if (branch.branchType == branch.type.reinforce)
                 {
-                    numcon += 1 * branch.N ;
+                    numcon += 1 * branch.N; //branch->edge 
+                    numvar++;               //z height variable
+                    numcon += 1 * branch.N; //branch->z height
+                    
                 }
                 else
                 {
@@ -205,7 +208,7 @@ namespace mikity.ghComponents
                     //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
                     for (int i = 0; i < branch.N; i++)
                     {
-                        if (i == 0 || i == branch.N - 1)
+                        /*if (i == 0 || i == branch.N - 1)
                         {
                             bkx[i + branch.varOffset] = mosek.boundkey.fx;
                             double x = branch.crv.Points[i].Location.X;
@@ -215,12 +218,16 @@ namespace mikity.ghComponents
                             bux[i + branch.varOffset] =  z;
                         }
                         else
-                        {
+                        */{
                             bkx[i + branch.varOffset] = mosek.boundkey.fr;
                             blx[i + branch.varOffset] = -infinity;
                             bux[i + branch.varOffset] = infinity;
                         }
                     }
+                    //Z height parameter
+                    bkx[branch.N + branch.varOffset] = mosek.boundkey.fr;
+                    blx[branch.N + branch.varOffset] = -infinity;
+                    bux[branch.N + branch.varOffset] = infinity;
                 }
                 else if (branch.branchType == branch.type.open)
                 {
@@ -408,6 +415,16 @@ namespace mikity.ghComponents
                         {
                             tieBranch(branch, branch.target, task, 1, 0);
                         }
+                        if (branch.branchType == branch.type.reinforce)
+                        {
+                            for (int i = 0; i < branch.N; i++)
+                            {
+                                task.putconbound(branch.conOffset + branch.N + i, mosek.boundkey.fx, 0, 0);
+                                task.putaij(branch.conOffset + branch.N + i, branch.varOffset + branch.N, -1);
+                                task.putaij(branch.conOffset + branch.N + i, branch.varOffset + i, 1);
+                                //task.putcj(branch.varOffset + branch.N, 1);
+                            }
+                        }
                     }
                     foreach (var node in _listNode)
                     {
@@ -418,7 +435,7 @@ namespace mikity.ghComponents
                             task.putaij(node.conOffset + i, node.share[i].varOffset+node.number[i], 1);
                         }
                     }
-                    task.putobjsense(mosek.objsense.minimize);
+                    task.putobjsense(mosek.objsense.maximize);
                     task.optimize();
                     // Print a summary containing information
                     //   about the solution for debugging purposes
@@ -436,8 +453,10 @@ namespace mikity.ghComponents
                     switch (solsta)
                     {
                         case mosek.solsta.optimal:
-                        case mosek.solsta.near_optimal:
                             System.Windows.Forms.MessageBox.Show("Optimal primal solution\n");
+                            break;
+                        case mosek.solsta.near_optimal:
+                            System.Windows.Forms.MessageBox.Show("Near Optimal primal solution\n");
                             break;
                         case mosek.solsta.dual_infeas_cer:
                         case mosek.solsta.prim_infeas_cer:
@@ -446,10 +465,10 @@ namespace mikity.ghComponents
                             Console.WriteLine("Primal or dual infeasibility.\n");
                             break;
                         case mosek.solsta.unknown:
-                            Console.WriteLine("Unknown solution status.\n");
+                            System.Windows.Forms.MessageBox.Show("Unknown solution status\n");
                             break;
                         default:
-                            Console.WriteLine("Other solution status");
+                            System.Windows.Forms.MessageBox.Show("Other solution status\n");
                             break;
 
                     }

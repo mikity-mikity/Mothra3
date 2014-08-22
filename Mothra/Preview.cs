@@ -28,8 +28,11 @@ namespace mikity.ghComponents
             {
                 foreach (var slice in listSlice)
                 {
-                    var pl = slice.pl;
-                    args.Display.DrawPolygon(new Rhino.Geometry.Point3d[]{pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5)},System.Drawing.Color.Azure,true);
+                    if (slice != listSlice.First())
+                    {
+                        var pl = slice.pl;
+                        args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5) }, System.Drawing.Color.Azure, true);
+                    }
                 }
             }
             foreach (var branch in listBranch)
@@ -52,10 +55,17 @@ namespace mikity.ghComponents
             }
             foreach (var leaf in listLeaf)
             {
-                if (leaf.airySrf[currentAiry] != null)
+                if (currentAiry < 4)
                 {
-                    //args.Display.DrawSurface(leaf.airySrf[currentAiry], System.Drawing.Color.Brown, 3);
-                    args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
+                    if (leaf.airySrf[currentAiry] != null)
+                    {
+                        args.Display.DrawSurface(leaf.airySrf[currentAiry], System.Drawing.Color.Brown, 3);
+                    }
+                }
+                else
+                {
+                    if(leaf.airySrf!=null)
+                        args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
                 }
             }
             foreach(var branch in listBranch)
