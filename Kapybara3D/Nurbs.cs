@@ -15,20 +15,16 @@ namespace Minilla3D.Elements
             public int nDV;
             public int elemDim;
             public double area;
-            int N;
+            int N;   //number of merge function, set to 4
 
             public double ou, ov, u, v;   //scaled coordinate, coordinate on Rhino, local coordinate on an element
             public double[] lo;
-            //public double[] f;
             public double[,][] d2;
             public double[][] d1;
             public double[] d0;
-            //public double[][] df;
-            //public double[][,] ddf;
             public double[] nf;
             public double[][] ndf;
             public double[][,] nddf;
-            public double[,] kernel;
             public double x, y, z;
             public double[][] gi;
             public double[][] Gi;
@@ -175,18 +171,12 @@ namespace Minilla3D.Elements
 
                 index = _index;
                 area = _area;
-                //f = new double[N];
-                //df = new double[N][];
-                //ddf = new double[N][,];
                 nf = new double[N];
                 ndf = new double[N][];
                 nddf = new double[N][,];
-                kernel = new double[N, N];
                 for (int i = 0; i < N; i++)
                 {
-                    //df[i] = new double[2];
                     ndf[i] = new double[2];
-                    //ddf[i] = new double[2, 2];
                     nddf[i] = new double[2, 2];
                 }
                 x = 0;

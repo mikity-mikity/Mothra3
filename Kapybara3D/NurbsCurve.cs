@@ -8,6 +8,54 @@ namespace Minilla3D.Elements
 {
     public class nurbsCurve:element
     {
+        public class dl
+        {
+            public nurbsElement.tuple left, right;
+            public nurbsElement.tuple target;
+            public int index;  //element index
+            public int[] internalIndex;
+            public int nDV;
+            public int elemDim;
+            public double area;
+
+            public double ot, t;   //scaled coordinate, coordinate on Rhino, local coordinate on an element
+            public double lo;        //local coordinate
+            public double[,][] d2;   //gradient of second derivative
+            public double[][] d1;    //gradient of first derivative
+            public double[] d0;      //gradient of shape function
+            public double x, y, z;
+            public double[][] gi;
+            public double[][] Gi;
+            public double[,] gij;
+            public double[,] Gij;
+            public double[,][] second;
+            public double[,] shape;
+            public double[, ,] C;
+            public double[, , ,] B;
+            public double[, , ,] D;
+            public double[,] H;
+            public double[,] SPK;
+            public double dv, refDv;
+            public dl(double _ot, double _t, int _index, double _lo, double _area)
+            {
+                ot = _ot;
+                t = _t;
+                lo=_lo;
+
+                index = _index;
+                area = _area;
+                x = 0;
+                y = 0;
+                z = 0;
+                gi = new double[1][] { new double[3] };
+                Gi = new double[1][] { new double[3] };
+                gij = new double[1, 1];
+                Gij = new double[1, 1];
+                second = new double[1, 1][] { { new double[3] } };
+                H = new double[1, 1];
+                SPK = new double[1, 1];
+            }
+        }
         double[] _cu;
 		double[] _pu;
         public int uDim,vDim;
@@ -406,7 +454,7 @@ namespace Minilla3D.Elements
             }
             
 
-            //Indeces for integrating points
+            //Indeces for inthegrating points
             ss[0] = 0;
             for (int i = 1; i < nIntPoint; i++)
 			{
