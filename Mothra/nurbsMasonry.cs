@@ -18,21 +18,51 @@ namespace mikity.ghComponents
     {
         public void tieBranch2(branch branch, leaf leaf)
         {
+            int T0 = 0, T1 = 0;
+
             for (int s = 0; s < 4; s++)
             {
+                if (s == 0)
+                {
+                    T0 = 0; T1 = (leaf.nUelem*leaf.NN) - 1;
+                }
+                if (s == 1)
+                {
+                    T0 = (leaf.nUelem*leaf.NN); T1 = (leaf.nUelem + leaf.nVelem)*leaf.NN - 1;
+                }
+                if (s == 2)
+                {
+                    T0 = (leaf.nUelem + leaf.nVelem)*leaf.NN; T1 = (leaf.nUelem * 2 + leaf.nVelem)*leaf.NN - 1;
+                }
+                if (s == 3)
+                {
+                    T0 = (leaf.nUelem * 2 + leaf.nVelem)*leaf.NN; T1 = (leaf.nUelem * 2 + leaf.nVelem * 2)*leaf.NN - 1;
+                }
                 if (leaf.branch[s] == branch)//s=0:bottom, s=1:right, s=2:top, s=3:left 
                 {
                     int N = 0;
                     if (s == 0 || s == 2) N = leaf.nU; else N = leaf.nV;
                     if (N == branch.N)
                     {
-                        for (int i = 0; i < branch.N; i++)
+                        for (int i = 0; i < branch.nElem*branch.NN; i++)
                         {
                             if (leaf.flip[s])
                             {
+                                if (branch.left == leaf)
+                                    branch.tuples[i].left = leaf.edgeTuples[T1 - i];
+                                if (branch.right == leaf)
+                                    branch.tuples[i].right = leaf.edgeTuples[T1 - i];
+                                if (branch.target == leaf)
+                                    branch.tuples[i].target = leaf.edgeTuples[T1 - i];
                             }
                             else
                             {
+                                if (branch.left == leaf)
+                                    branch.tuples[i].left = leaf.edgeTuples[T0 + i];
+                                if (branch.right == leaf)
+                                    branch.tuples[i].right = leaf.edgeTuples[T0 + i];
+                                if (branch.target == leaf)
+                                    branch.tuples[i].target = leaf.edgeTuples[T0 + i];
                             }
                         }
                     }
@@ -469,15 +499,15 @@ namespace mikity.ghComponents
                         double localT = centerT - tNum;
                         branch.tuples[num] = new dl_ex(centerT, centerT * branch.scaleT + branch.originT, index, localT, 1d / ((double)branch.NN));
                         branch.tuples[num].init(branch.crv, branch.scaleT);
-                        if (branch.branchType == branch.type.kink)
-                        {
-                            tieBranch2(branch, branch.left);
-                            tieBranch2(branch, branch.right);
-                        }
-                        else
-                        {
-                            tieBranch2(branch, branch.target);
-                        }
+                    }
+                    if (branch.branchType == branch.type.kink)
+                    {
+                        tieBranch2(branch, branch.left);
+                        tieBranch2(branch, branch.right);
+                    }
+                    else
+                    {
+                        tieBranch2(branch, branch.target);
                     }
                     foreach (var tup in branch.tuples)
                     {
