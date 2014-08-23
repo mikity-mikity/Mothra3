@@ -10,6 +10,7 @@ namespace Minilla3D.Elements
     {
         public class tuple
         {
+            public double[] dcdt;   //only used for tuples placed on edges.[1,0] for bottom, [0,1] for right, [-1,0] for top, [0,-1] for left
             public int index;  //element index
             public int[] internalIndex;
             public int nDV;
@@ -388,8 +389,12 @@ namespace Minilla3D.Elements
                     }
                 }
             }
+            compute(tup);
+        }
+        public void compute(tuple tup)
+        {
             //Global position
-            double X = 0, Y = 0,Z=0;
+            double X = 0, Y = 0, Z = 0;
             for (int i = 0; i < nDV; i++)
             {
                 X += tup.shape[0, i] * node[i];
@@ -416,7 +421,7 @@ namespace Minilla3D.Elements
             {
                 for (int m = 0; m < elemDim; m++)
                 {
-                    tup.gij[n, m] = tup.gi[n][0] * tup.gi[m][0] + tup.gi[n][1] * tup.gi[m][1]+ tup.gi[n][2] * tup.gi[m][2];
+                    tup.gij[n, m] = tup.gi[n][0] * tup.gi[m][0] + tup.gi[n][1] * tup.gi[m][1] + tup.gi[n][2] * tup.gi[m][2];
                 }
             }
             if (elemDim == 1)
@@ -456,6 +461,7 @@ namespace Minilla3D.Elements
                 }
                 tup.Gi[n][0] = Fx;
                 tup.Gi[n][1] = Fy;
+                tup.Gi[n][2] = 0;
             }
             //Connection coefficients
             for (int n = 0; n < elemDim; n++)
@@ -503,46 +509,7 @@ namespace Minilla3D.Elements
             {
                 tup.d0[k] = tup.shape[2, k * __DIM + 2];
             }
-
-            /*
-            //Create gradient of hessian with computed connection coefficients
-            for (int m = 0; m < elemDim; m++)
-            {
-                for (int n = 0; n < elemDim; n++)
-                {
-                    for (int k = 0; k < nNode; k++)
-                    {
-                        gradient[m, n][k] = D[m, n, 2, k * __DIM + 2];
-                        for (int i = 0; i < elemDim; i++)
-                        {
-                            gradient[m, n][k] -= Gamma[m, n, i] * C[i, 2, k * 3 + 2];
-                        }
-                    }
-                }
-            }
-            //Raising index
-            double[,] tmp = new double[elemDim, elemDim];
-            for (int k = 0; k < nNode; k++)
-            {
-                for (int m = 0; m < elemDim; m++)
-                {
-                    for (int n = 0; n < elemDim; n++)
-                    {
-                        double val = 0;
-                        for (int s = 0; s < elemDim; s++)
-                        {
-                            val += gradient[m, s][k] * invMetric[s, n];
-                        }
-                        gradient2[m, n][k] = val;
-                    }
-                }
-            }*/
         }
-/*
- * 
- * 
-                        }
- * */
         double[][,] M;
         int[] dim;
 		double[][] hh;
@@ -766,89 +733,6 @@ namespace Minilla3D.Elements
         {
             return Factorial(N) / Factorial(N - k) / Factorial(k);
         }
-        bool exceptional()
-        {
-            if (this.typeOfBorder == (border.Left | border.Top))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Left | border.Bottom))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Right | border.Top))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Right | border.Bottom))
-            {
-                return true;
-            }
-            return false;
-        }
-        public int numberOfConstraintConditions()
-        {
-            if (exceptional()) return 0;
-            return nBIntPoint * 2;
-        }
-        public int numberOfConstraintConditions2(bool T)
-        {
-            if (T&&exceptional()) return 0;
-            return nIntPoint * 3;
-        }
-        public int mergeResidual(ShoNS.Array.DoubleArray residual, int i)
-        {
-            if (exceptional()) return i;
-            for (int j = 0; j < nBIntPoint; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    double resid = bIntP[j].getResidualOfBoundaryCondition(node,k);
-                    residual[i + j * 2 + k] = resid;
-                }
-            }
-            return i + nBIntPoint * 2;
-        }
-        public int mergeJacobian(ShoNS.Array.SparseDoubleArray jacobian, int i)
-        {
-            if (exceptional()) return i;
-            for (int j = 0; j < nBIntPoint; j++)
-            {
-                for (int k = 0; k < 2; k++)
-                {
-                    var grad = bIntP[j].getGradientOfBoundaryCondition(k);
-                    for(int f=0;f<nNode;f++)
-                    {
-                        jacobian[i + j*2 + k, index[f]] = grad[f];
-                    }
-                }
-            }
-            return i + nBIntPoint * 2;
-        }
-        public int mergeJacobianOfCurvature(ShoNS.Array.SparseDoubleArray jacobH, int num,bool T)
-        {
-            if (T&&exceptional()) return num;
-            for (int i = 0; i < nIntPoint; i++)
-            {
-                var grad = intP[i].getGradientOfH(0, 0);
-                for (int f = 0; f < nNode; f++)
-                {
-                    jacobH[num + i * 3 + 0, index[f]] = grad[f];
-                }
-                grad = intP[i].getGradientOfH(1, 1);
-                for (int f = 0; f < nNode; f++)
-                {
-                    jacobH[num + i * 3 + 1, index[f]] = grad[f];
-                }
-                grad = intP[i].getGradientOfH(0, 1);
-                for (int f = 0; f < nNode; f++)
-                {
-                    jacobH[num + i * 3 + 2, index[f]] = grad[f];
-                }
-            }
-            return num + nIntPoint*3;
-        }
-
         double __cu(int n, int dim)
         {
             switch (dim)
@@ -1053,80 +937,11 @@ namespace Minilla3D.Elements
                 p.transferAngleToTension();
             }
         }
-        public nurbsElement(int _uDim, int _vDim, int[] _index, int uNum, int vNum, double[] uKnot, double[] vKnot, border _border = border.None)
+        public nurbsElement(int _uDim, int _vDim, int[] _index, int uNum, int vNum, double[] uKnot, double[] vKnot)
             : base(_index, _uDim * _vDim, 2, 4)
         {
-
-            this.typeOfBorder = _border;
             int bVdim = _vDim +1;
             int bUdim = _uDim +1;
-            switch (_border)
-            {
-                case border.Left | border.Top|border.Right:
-                    this.bIntP = new integratingPoint[bVdim * 2 + bUdim];
-                    nBIntPoint = bVdim * 2 + bUdim;
-                    break;
-                case border.Left | border.Bottom | border.Right:
-                    this.bIntP = new integratingPoint[bVdim * 2 + bUdim];
-                    nBIntPoint = bVdim * 2 + bUdim;
-                    break;
-                case border.Left | border.Top | border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim * 2 + bVdim];
-                    nBIntPoint = bUdim * 2 + bVdim;
-                    break;
-                case border.Right | border.Top | border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim * 2 + bVdim];
-                    nBIntPoint = bUdim * 2 + bVdim;
-                    break;
-                case border.Left | border.Right:
-                    this.bIntP = new integratingPoint[bVdim + bVdim];
-                    nBIntPoint = bVdim + bVdim;
-                    break;
-                case border.Top | border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim + bUdim];
-                    nBIntPoint = bUdim + bUdim;
-                    break;
-                case border.Left | border.Top:
-                    this.bIntP = new integratingPoint[bUdim + bVdim];
-                    nBIntPoint = bUdim + bVdim;
-                    break;
-                case border.Left | border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim + bVdim];
-                    nBIntPoint = bUdim + bVdim;
-                    break;
-                case border.Right | border.Top:
-                    this.bIntP = new integratingPoint[bUdim + bVdim];
-                    nBIntPoint = bUdim + bVdim;
-                    break;
-                case border.Right | border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim + bVdim];
-                    nBIntPoint = bUdim + bVdim;
-                    break;
-                case border.Left:
-                    this.bIntP = new integratingPoint[bVdim];
-                    nBIntPoint = bVdim;
-                    break;
-                case border.Right:
-                    this.bIntP = new integratingPoint[bVdim];
-                    nBIntPoint = bVdim;
-                    break;
-                case border.Top:
-                    this.bIntP = new integratingPoint[bUdim];
-                    nBIntPoint = bUdim;
-                    break;
-                case border.Bottom:
-                    this.bIntP = new integratingPoint[bUdim];
-                    nBIntPoint = bUdim;
-                    break;
-                default:
-                    this.bIntP = new integratingPoint[0];
-                    nBIntPoint = 0;
-                    break;
-            }
-            for (int i = 0; i < nBIntPoint; i++)
-            {
-                bIntP[i] = new integratingPoint(nNode, elemDim);
-            }
             uDim = _uDim;
             vDim=_vDim;
             _cu = new double[elemDim][];
@@ -1229,250 +1044,6 @@ namespace Minilla3D.Elements
 				}
 			}
             //local coordinates for integrating points on border
-            int count = 0;
-            switch (_border)
-            {
-                case border.Left | border.Top | border.Right:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bUdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    for (int i = 0; i < bVdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim - 1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    break;
-                case border.Left | border.Bottom | border.Right:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i,bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    break;
-                case border.Left | border.Top | border.Bottom:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    for (int i = 0; i <bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                case border.Right | border.Top | border.Bottom:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim - 1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim - 1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                case border.Left | border.Right:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bVdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    break;
-                case border.Top | border.Bottom:
-                    count = 0;
-                    for (int i = 0; i < bUdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    for (int i = 0; i < bUdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                case border.Left | border.Top:
-                    count = 0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    break;
-                case border.Left | border.Bottom:
-                    count=0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                case border.Right | border.Top:
-                    count=0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    break;
-                case border.Right | border.Bottom:
-                    count=0;
-                    for (int i = 0; i < bVdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    for (int i = 0; i < bUdim; i++,count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                case border.Left:
-                    count=0;
-                    for (int i = 0; i < bVdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = 0;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, -1 };
-                    }
-                    break;
-                case border.Right:
-                    count=0;
-                    for (int i = 0; i < bVdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = 1;
-                        bIntP[count].localCoord[1] = __cu(i, bVdim-1);
-                        bIntP[count].weight = __pu(i, bVdim - 1);
-                        bIntP[count].edge = new double[2] { 0, 1 };
-                    }
-                    break;
-                case border.Top:
-                    count=0;
-                    for (int i = 0; i < bUdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 0;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { 1, 0 };
-                    }
-                    break;
-                case border.Bottom:
-                    count=0;
-                    for (int i = 0; i < bUdim; i++, count++)
-                    {
-                        bIntP[count].localCoord[0] = __cu(i, bUdim-1);
-                        bIntP[count].localCoord[1] = 1;
-                        bIntP[count].weight = __pu(i, bUdim - 1);
-                        bIntP[count].edge = new double[2] { -1, 0 };
-                    }
-                    break;
-                default:
-                    break;
-            }
             List<Minilla3D.Elements.integratingPoint> allIntP = new List<integratingPoint>();
             allIntP.AddRange(intP);
             allIntP.AddRange(bIntP);

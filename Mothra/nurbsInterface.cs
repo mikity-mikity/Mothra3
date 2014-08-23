@@ -20,6 +20,47 @@ namespace mikity.ghComponents
                 }
             }
         }
+        void Nurbs2x(branch branch, double[,] _x)
+        {
+            for (int i = 0; i < branch.N; i++)
+            {
+                _x[i, 0] = branch.crv.Points[i].Location.X;
+                _x[i, 1] = branch.crv.Points[i].Location.Y;
+                _x[i, 2] = branch.crv.Points[i].Location.Z;
+            }
+        }
+        void createNurbsElements(branch branch)
+        {
+            double[] uKnot;
+
+            int N = branch.N;
+            int uDim = branch.crv.Order;
+            int uDdim = branch.crv.Order - 1;
+            uKnot = new double[branch.N - uDdim + 1 + uDdim * 2];
+            for (int i = 0; i < uDdim; i++)
+            {
+                uKnot[i] = 0;
+            }
+            for (int i = 0; i < branch.N - uDdim + 1; i++)
+            {
+                uKnot[i + uDdim] = i;
+            }
+            for (int i = 0; i < uDdim; i++)
+            {
+                uKnot[i + branch.N + 1] = branch.N - uDdim;
+            }
+            branch.myReinforcement=new Minilla3D.Objects.reinforcement();
+            int[] index = new int[uDim];
+            for (int i = 1; i < branch.N - uDdim+1; i++)
+            {
+                for (int l = 0; l < uDim; l++)
+                {
+                    index[l] = i - 1 + l;
+                }
+                branch.myReinforcement.elemList.Add(new Minilla3D.Elements.nurbsCurve(uDim, index, i, uKnot));
+            }
+        }
+
         void createNurbsElements(leaf leaf)
         {
             double[] uKnot;
@@ -71,112 +112,7 @@ namespace mikity.ghComponents
                             index[k * uDim + l] = (j - 1 + k) * leaf.nU + i - 1 + l;
                         }
                     }
-                    Minilla3D.Elements.nurbsElement.border _border = Minilla3D.Elements.nurbsElement.border.None;
-                    /*
-                    //judge if on the border
-                    if (j == 1)
-                    {
-                        _border = _border | Minilla3D.Elements.nurbsElement.border.Top;
-                        {
-                            int[] index2 = new int[uDim];
-                            for (int l = 0; l < uDim; l++)
-                            {
-                                index2[l] = (j - 1) * nU + i - 1 + l;
-                            }
-                            var c = new Minilla3D.Elements.nurbsCurve(uDim, index2, i, uKnot);
-                            v.edgeList.Add(c);
-                            v.topEdge.Add(c);
-                        }
-                    }
-                    if (i == 1)
-                    {
-                        _border = _border | Minilla3D.Elements.nurbsElement.border.Left;
-                        {
-                            int[] index2 = new int[vDim];
-                            for (int k = 0; k < vDim; k++)
-                            {
-                                index2[k] = (j - 1 + k) * nU + i - 1;
-                            }
-                            var c = new Minilla3D.Elements.nurbsCurve(vDim, index2, j, vKnot);
-                            v.edgeList.Add(c);
-                            v.leftEdge.Add(c);
-                        }
-                    }
-                    if (j == nV - vDdim)
-                    {
-                        _border = _border | Minilla3D.Elements.nurbsElement.border.Bottom;
-                        {
-                            int[] index2 = new int[uDim];
-                            for (int l = 0; l < uDim; l++)
-                            {
-                                index2[l] = (j - 1 + (vDim - 1)) * nU + i - 1 + l;
-                            }
-                            var c = new Minilla3D.Elements.nurbsCurve(uDim, index2, i, uKnot);
-                            v.edgeList.Add(c);
-                            v.bottomEdge.Add(c);
-                        }
-                    }
-                    if (i == nU - uDdim)
-                    {
-                        _border = _border | Minilla3D.Elements.nurbsElement.border.Right;
-                        {
-                            int[] index2 = new int[vDim];
-                            for (int k = 0; k < vDim; k++)
-                            {
-                                index2[k] = (j - 1 + k) * nU + i - 1 + uDim - 1;
-
-                            }
-                            var c = new Minilla3D.Elements.nurbsCurve(vDim, index2, j, vKnot);
-                            v.edgeList.Add(c);
-                            v.rightEdge.Add(c);
-                        }
-                    }*/
-                    leaf.myMasonry.elemList.Add(new Minilla3D.Elements.nurbsElement(uDim, vDim, index, i, j, uKnot, vKnot, _border));
-                    /*switch (_border)
-                    {
-                        case nurbsElement.border.Left | nurbsElement.border.Top | nurbsElement.border.Right:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.topEdge.Last(), v.rightEdge.Last());
-                            break;
-                        case nurbsElement.border.Left | nurbsElement.border.Bottom | nurbsElement.border.Right:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.bottomEdge.Last(), v.rightEdge.Last());
-                            break;
-                        case nurbsElement.border.Left | nurbsElement.border.Top | nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.topEdge.Last(), v.bottomEdge.Last());
-                            break;
-                        case nurbsElement.border.Right | nurbsElement.border.Top | nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.rightEdge.Last(), v.topEdge.Last(), v.bottomEdge.Last());
-                            break;
-                        case nurbsElement.border.Left | nurbsElement.border.Right:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.rightEdge.Last());
-                            break;
-                        case nurbsElement.border.Top | nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.topEdge.Last(), v.bottomEdge.Last());
-                            break;
-                        case nurbsElement.border.Left | nurbsElement.border.Top:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.topEdge.Last());
-                            break;
-                        case nurbsElement.border.Left | nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.leftEdge.Last(), v.bottomEdge.Last());
-                            break;
-                        case nurbsElement.border.Right | nurbsElement.border.Top:
-                            v.elemList.Last().stitch(v.rightEdge.Last(), v.topEdge.Last());
-                            break;
-                        case nurbsElement.border.Right | nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.rightEdge.Last(), v.bottomEdge.Last());
-                            break;
-                        case nurbsElement.border.Left:
-                            v.elemList.Last().stitch(v.leftEdge.Last());
-                            break;
-                        case nurbsElement.border.Right:
-                            v.elemList.Last().stitch(v.rightEdge.Last());
-                            break;
-                        case nurbsElement.border.Top:
-                            v.elemList.Last().stitch(v.topEdge.Last());
-                            break;
-                        case nurbsElement.border.Bottom:
-                            v.elemList.Last().stitch(v.bottomEdge.Last());
-                            break;
-                    }*/
+                    leaf.myMasonry.elemList.Add(new Minilla3D.Elements.nurbsElement(uDim, vDim, index, i, j, uKnot, vKnot));
                 }
             }
         }

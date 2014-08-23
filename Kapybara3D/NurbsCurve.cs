@@ -36,6 +36,29 @@ namespace Minilla3D.Elements
             public double[,] H;
             public double[,] SPK;
             public double dv, refDv;
+            public void CtoB(int elemDim, int nDV)
+            {
+                for (int i = 0; i < elemDim; i++)
+                {
+                    for (int j = 0; j < elemDim; j++)
+                    {
+                        for (int u = 0; u < nDV; u++)
+                        {
+                            for (int v = 0; v < nDV; v++)
+                            {
+                                B[i, j, u, v] = 0;
+                                for (int r = 0; r < __DIM; r++)
+                                {
+                                    //対称化
+                                    B[i, j, u, v] += C[i, r, u] * C[j, r, v];
+                                    B[i, j, u, v] += C[j, r, u] * C[i, r, v];
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             public dl(double _ot, double _t, int _index, double _lo, double _area)
             {
                 ot = _ot;
@@ -56,9 +79,314 @@ namespace Minilla3D.Elements
                 SPK = new double[1, 1];
             }
         }
+        public void precompute(dl tup)
+        {
+            //Assume M[0] and M[1] are precomputed,
+
+            //double[][,] M=new double[2][,];
+            //M[0]=fM(uNum,_uDim,_uDim-1,uKnot);
+            //M[1]=fM(vNum,_vDim,_vDim-1,vKnot);
+            tup.internalIndex = this.index;
+            tup.nDV = nDV / 3;
+            tup.elemDim = elemDim;
+            tup.shape = new double[__DIM, nDV];                        //Global coordinate *coefficient*
+            tup.C = new double[elemDim, __DIM, nDV];                //Base vectors *coefficient*
+            tup.B = new double[elemDim, elemDim, nDV, nDV];          //Metric *coefficient*
+            tup.D = new double[elemDim, elemDim, __DIM, nDV];   //Hessian coefficient
+            tup.d0 = new double[nDV / 3];
+            tup.d1 = new double[elemDim][];
+            tup.d2 = new double[elemDim, elemDim][];
+            for (int i = 0; i < elemDim; i++)
+            {
+                tup.d1[i] = new double[nDV / 3];
+            }
+            for (int i = 0; i < elemDim; i++)
+            {
+                for (int j = 0; j < elemDim; j++)
+                {
+                    tup.d2[i, j] = new double[nDV / 3];
+                }
+            }
+
+            //Shape functions  [N] (for global coordinate)
+            double t = tup.lo;
+            for (int k = 0; k < dim; k++)
+            {
+                hh[k] = Math.Pow(t, (dim - k - 1));
+            }
+            for (int k = 0; k < dim; k++)
+            {
+                double val = 0;
+                for (int l = 0; l < dim; l++)
+                {
+                    val += hh[l] * M[l, k];
+                }
+                tt[k] = val;
+            }
+            for (int j = 0; j < __DIM; j++)
+            {
+                for (int k = 0; k < nDV; k++)
+                {
+                    tup.shape[j, k] = 0;
+                }
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                //Shape functinos
+                double shape = 1.0;
+                shape *= tt[dd[k]];
+                for (int j = 0; j < __DIM; j++)
+                {
+                    tup.shape[j, k * __DIM + j] = shape;
+                }
+            }
+            //Create [C]  (for base vectors)
+            t = tup.lo;
+            {
+                for (int k = 0; k < dim - 1; k++)
+                {
+                    hh[k] = (dim - k - 1) * Math.Pow(t, (dim - k - 2));
+                }
+                hh[dim - 1] = 0;
+            }
+            for (int k = 0; k < dim; k++)
+            {
+                double val = 0;
+                for (int l = 0; l < dim; l++)
+                {
+                    val += hh[l] * M[l, k];
+                }
+                tt[k] = val;
+            }
+            for (int jj = 0; jj < __DIM; jj++)
+            {
+                for (int j = 0; j < nDV; j++)
+                {
+                    tup.C[0, jj, j] = 0;
+                }
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                //[C]
+                double C = 1.0;
+                for (int j = 0; j < elemDim; j++)
+                {
+                    C *= tt[dd[k]];
+                }
+                for (int j = 0; j < __DIM; j++)
+                {
+                    tup.C[0, j, k * __DIM + j] = C;
+                }
+            }
+            //Create [B]  (for metric)
+            tup.CtoB(elemDim, nDV);
+            //Create [D] (for second derivative)
+            t = tup.lo;
+            for (int k = 0; k < dim - 1; k++)
+            {
+                hh[k] = (dim - k - 1) * (dim - k - 2) * Math.Pow(t, (dim - k - 3));
+            }
+            hh[dim - 1] = 0;
+            hh[dim - 2] = 0;
+
+            for (int k = 0; k < dim; k++)
+            {
+                double val = 0;
+                for (int l = 0; l < dim; l++)
+                {
+                    val += hh[l] * M[l, k];
+                }
+                tt[k] = val;
+            }
+            for (int jj = 0; jj < __DIM; jj++)
+            {
+                for (int j = 0; j < nDV; j++)
+                {
+                    tup.D[0, 0, jj, j] = 0;
+                }
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                //[D]
+                double D = 1.0;
+                D *= tt[dd[k]];
+                for (int j = 0; j < __DIM; j++)
+                {
+                    tup.D[0, 0, j, k * __DIM + j] = D;
+                }
+            }
+            compute(tup);
+        }
+        public void compute(dl tup)
+        {
+            //Global position
+            double X = 0, Y = 0, Z = 0;
+            for (int i = 0; i < nDV; i++)
+            {
+                X += tup.shape[0, i] * node[i];
+                Y += tup.shape[1, i] * node[i];
+                Z += tup.shape[2, i] * node[i];
+            }
+            tup.x = X;
+            tup.y = Y;
+            tup.z = Z;
+            //covariant base vectors
+            double fx = 0, fy = 0;
+            for (int i = 0; i < nDV; i++)
+            {
+                fx += tup.C[0, 0, i] * node[i];
+                fy += tup.C[0, 1, i] * node[i];
+            }
+            tup.gi[0][0] = fx;
+            tup.gi[0][1] = fy;
+            tup.gi[0][2] = 0;
+            tup.gij[0, 0] = tup.gi[0][0] * tup.gi[0][0] + tup.gi[0][1] * tup.gi[0][1] + tup.gi[0][2] * tup.gi[0][2];
+            if (elemDim == 1)
+            {
+                _inv1(tup.gij, tup.Gij);
+            }
+            else if (elemDim == 2)
+            {
+                _inv2(tup.gij, tup.Gij);
+            }
+            else if (elemDim == 3)
+            {
+                _inv3(tup.gij, tup.Gij);
+            }
+            if (elemDim == 1)
+            {
+                tup.dv = Math.Sqrt(_det1(tup.gij));
+            }
+            else if (elemDim == 2)
+            {
+                tup.dv = Math.Sqrt(_det2(tup.gij));
+            }
+            else if (elemDim == 3)
+            {
+                tup.dv = Math.Sqrt(_det3(tup.gij));
+            }
+            tup.refDv = tup.dv;
+
+            //contravatiant base vectors
+            double Fx = 0, Fy = 0;
+            Fx += tup.gi[0][0] * tup.Gij[0, 0];
+            Fy += tup.gi[0][1] * tup.Gij[0, 0];
+            tup.Gi[0][0] = Fx;
+            tup.Gi[0][1] = Fy;
+            tup.Gi[0][2] = 0;
+            //Create gradient of hessian with computed connection coefficients
+            for (int k = 0; k < nNode; k++)
+            {
+                tup.d2[0, 0][k] = tup.D[0, 0, 2, k * __DIM + 2];
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                tup.d1[0][k] = tup.C[0, 2, k * __DIM + 2];
+            }
+            for (int k = 0; k < nNode; k++)
+            {
+                tup.d0[k] = tup.shape[2, k * __DIM + 2];
+            }
+        }
+        double[,] M;
+        int dim;
+        double[] hh;
+        double[] tt;
+        int[] dd;
+
         double[] _cu;
 		double[] _pu;
         public int uDim,vDim;
+        private void _inv1(double[,] from, double[,] to)
+        {
+            if (from[0, 0] <= 0)
+            {
+                to[0, 0] = 0;
+                from[0, 0] = 0;
+            }
+            else
+            {
+                to[0, 0] = 1 / from[0, 0];
+            }
+        }
+        private void _inv2(double[,] from, double[,] to)
+        {
+            double det = _det2(from);
+            if (det <= 0)
+            {
+                to[0, 0] = 0;
+                to[1, 0] = 0;
+                to[0, 1] = 0;
+                to[1, 1] = 0;
+                from[0, 0] = 0;
+                from[1, 0] = 0;
+                from[0, 1] = 0;
+                from[1, 1] = 0;
+            }
+            else
+            {
+                to[0, 0] = from[1, 1] / det;
+                to[1, 1] = from[0, 0] / det;
+                to[1, 0] = -from[1, 0] / det;
+                to[0, 1] = -from[0, 1] / det;
+            }
+        }
+        private void _inv3(double[,] from, double[,] to)
+        {
+            double det = _det3(from);
+            if (det <= 0)
+            {
+                to[0, 0] = 0;
+                to[0, 1] = 0;
+                to[0, 2] = 0;
+                to[1, 0] = 0;
+                to[1, 1] = 0;
+                to[1, 2] = 0;
+                to[1, 3] = 0;
+                to[2, 0] = 0;
+                to[2, 1] = 0;
+                to[2, 2] = 0;
+                from[0, 0] = 0;
+                from[0, 1] = 0;
+                from[0, 2] = 0;
+                from[1, 0] = 0;
+                from[1, 1] = 0;
+                from[1, 2] = 0;
+                from[1, 3] = 0;
+                from[2, 0] = 0;
+                from[2, 1] = 0;
+                from[2, 2] = 0;
+            }
+            else
+            {
+                to[0, 0] = (from[1, 1] * from[2, 2] - from[1, 2] * from[2, 1]) / det;
+                to[1, 0] = (from[2, 1] * from[0, 2] - from[2, 2] * from[0, 1]) / det;
+                to[2, 0] = (from[0, 1] * from[1, 2] - from[0, 2] * from[1, 1]) / det;
+                to[0, 1] = (from[1, 2] * from[2, 0] - from[1, 0] * from[2, 2]) / det;
+                to[1, 1] = (from[2, 2] * from[0, 0] - from[2, 0] * from[0, 2]) / det;
+                to[2, 1] = (from[0, 2] * from[1, 0] - from[0, 0] * from[1, 2]) / det;
+                to[0, 2] = (from[1, 0] * from[2, 1] - from[1, 1] * from[2, 0]) / det;
+                to[1, 2] = (from[2, 0] * from[0, 1] - from[2, 1] * from[0, 0]) / det;
+                to[2, 2] = (from[0, 0] * from[1, 1] - from[0, 1] * from[1, 0]) / det;
+            }
+        }
+        private double _det1(double[,] m)
+        {
+            return m[0, 0];
+        }
+        private double _det2(double[,] m)
+        {
+            return m[0, 0] * m[1, 1] - m[0, 1] * m[1, 0];
+        }
+        private double _det3(double[,] m)
+        {
+            return m[0, 0] * m[1, 1] * m[2, 2]
+            + m[1, 0] * m[2, 1] * m[0, 2]
+            + m[2, 0] * m[0, 1] * m[1, 2]
+            - m[2, 0] * m[1, 1] * m[0, 2]
+            - m[1, 0] * m[0, 1] * m[2, 2]
+            - m[0, 0] * m[2, 1] * m[1, 2];
+        }
         double[] fN(int _i, int _k, int _dim, int dim, double[] knot)
 		{
 		    if (_dim==1)
@@ -182,26 +510,7 @@ namespace Minilla3D.Elements
         {
             return Factorial(N) / Factorial(N - k) / Factorial(k);
         }
-        bool exceptional()
-        {
-            if (this.typeOfBorder == (border.Left | border.Top))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Left | border.Bottom))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Right | border.Top))
-            {
-                return true;
-            }
-            if (this.typeOfBorder == (border.Right | border.Bottom))
-            {
-                return true;
-            }
-            return false;
-        }
+
         public void setPlane(double a, double b, double c, double d)
         {
             foreach (var p in intP)
@@ -215,7 +524,6 @@ namespace Minilla3D.Elements
         }
         public int mergeResidual(ShoNS.Array.DoubleArray residual, int i)
         {
-            if (exceptional()) return i;
             for (int j = 0; j < nBIntPoint; j++)
             {
                 for (int k = 0; k < 2; k++)
@@ -228,7 +536,6 @@ namespace Minilla3D.Elements
         }
         public int mergeJacobian(ShoNS.Array.SparseDoubleArray jacobian, int i)
         {
-            if (exceptional()) return i;
             for (int j = 0; j < nBIntPoint; j++)
             {
                 for (int k = 0; k < 2; k++)
@@ -432,17 +739,17 @@ namespace Minilla3D.Elements
                     return 0;
             }
         }
-        public nurbsCurve(int _uDim, int[] _index, int uNum, double[] uKnot, border _border = border.None)
+        public nurbsCurve(int _uDim, int[] _index, int uNum, double[] uKnot)
             : base(_index, _uDim, 1, (_uDim + 1))
         {
             uDim = _uDim;
             _cu = new double[uDim + 1];
             _pu = new double[uDim + 1];
             int[] ss = new int[nIntPoint];		//Indeces for integrating points
-			int[] dd=new int[nNode];		    //Indeces for nodes
-            int dim=uDim;
-			double[] hh=new double[uDim];
-		    double[] tt=new double[uDim];
+			dd=new int[nNode];		    //Indeces for nodes
+            dim=uDim;
+			hh=new double[uDim];
+		    tt=new double[uDim];
 
 					
 			//Weight coefficient distribution
@@ -482,7 +789,6 @@ namespace Minilla3D.Elements
 				intP[i].localCoord[0]=_cu[ss[i]];
 				intP[i].weight*=_pu[ss[i]];
 			}
-		    double[,] M=null;
 		    M=fM(uNum,_uDim,_uDim-1,uKnot);
 			//Shape functions  [N] (for global coordinate)
 			for(int i=0;i<nIntPoint;i++)

@@ -11,16 +11,6 @@ namespace Minilla3D.Elements
         enum type{
             Cauchy,SPK
         };
-        [Flags]
-        public enum border
-        {
-            None = 0x00,
-            Left = 0x01,
-            Right = 0x02,
-            Top = 0x04,
-            Bottom = 0x08
-        }
-        public border typeOfBorder = border.None;
         type typeOfStress;
         protected const int __DIM=3;
         public int nIntPoint,nBIntPoint,nNode,elemDim,nDV;                
@@ -274,7 +264,6 @@ namespace Minilla3D.Elements
             {
                 force[i] = 0;
             }
-            if (typeOfBorder == border.None) return;
             for (int i = 0; i < nBIntPoint; i++)
             {
                 var p = bIntP[i];

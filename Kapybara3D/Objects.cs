@@ -84,30 +84,6 @@ namespace Minilla3D
                     e.computeHessian()
                 );
             }
-            public void getResidual(ShoNS.Array.DoubleArray resid)
-            {
-                int num = 0;
-                foreach (var e in elemList)
-                {
-                    num = e.mergeResidual(resid, num);
-                }
-            }
-            public void getJacobian(ShoNS.Array.SparseDoubleArray jacob)
-            {
-                int num = 0;
-                foreach (var e in elemList)
-                {
-                    num=e.mergeJacobian(jacob, num);
-                }
-            }
-            public void GetJacobianOfCurvature(SparseDoubleArray jacobH,bool T)
-            {
-                int num = 0;
-                foreach (var e in elemList)
-                {
-                    num = e.mergeJacobianOfCurvature(jacobH, num,T);
-                }
-            }
             public void computeGlobalCoord()
             {
                 Parallel.ForEach(elemList, (e) =>
@@ -130,25 +106,6 @@ namespace Minilla3D
                 }
                 return num;
             }
-            public int totalNumberOfBconst()
-            {
-                int num = 0;
-                foreach (var e in elemList)
-                {
-                    num += e.numberOfConstraintConditions();
-                }
-                return num;
-            }
-            public int totalNumberOfIconst(bool T)
-            {
-                int num = 0;
-                foreach (var e in elemList)
-                {
-                    num += e.numberOfConstraintConditions2(T);
-                }
-                return num;
-            }
-
         }
 
 	}
