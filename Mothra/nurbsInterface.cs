@@ -8,25 +8,25 @@ namespace mikity.ghComponents
 {
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
-        void Nurbs2x(leaf leaf, double[,] _x)
+        void Nurbs2x(Rhino.Geometry.NurbsSurface srf, double[,] _x)
         {
-            for (int i = 0; i < leaf.nV; i++)
+            for (int i = 0; i < srf.Points.CountV; i++)
             {
-                for (int j = 0; j < leaf.nU; j++)
+                for (int j = 0; j < srf.Points.CountU; j++)
                 {
-                    _x[(i * leaf.nU + j), 0] = leaf.srf.Points.GetControlPoint(j, i).Location.X;
-                    _x[(i * leaf.nU + j), 1] = leaf.srf.Points.GetControlPoint(j, i).Location.Y;
-                    _x[(i * leaf.nU + j), 2] = leaf.srf.Points.GetControlPoint(j, i).Location.Z;
+                    _x[(i * srf.Points.CountU + j), 0] = srf.Points.GetControlPoint(j, i).Location.X;
+                    _x[(i * srf.Points.CountU + j), 1] = srf.Points.GetControlPoint(j, i).Location.Y;
+                    _x[(i * srf.Points.CountU + j), 2] = srf.Points.GetControlPoint(j, i).Location.Z;
                 }
             }
         }
-        void Nurbs2x(branch branch, double[,] _x)
+        void Nurbs2x(Rhino.Geometry.NurbsCurve crv, double[,] _x)
         {
-            for (int i = 0; i < branch.N; i++)
+            for (int i = 0; i < crv.Points.Count; i++)
             {
-                _x[i, 0] = branch.crv.Points[i].Location.X;
-                _x[i, 1] = branch.crv.Points[i].Location.Y;
-                _x[i, 2] = branch.crv.Points[i].Location.Z;
+                _x[i, 0] = crv.Points[i].Location.X;
+                _x[i, 1] = crv.Points[i].Location.Y;
+                _x[i, 2] = crv.Points[i].Location.Z;
             }
         }
         void createNurbsElements(branch branch)

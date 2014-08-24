@@ -78,6 +78,12 @@ namespace Minilla3D
                     e.setupNodesFromList(x)
                     );
             }
+            public void setupNodesFromList(int s,double[,] x)
+            {
+                Parallel.ForEach(elemList, (e) =>
+                    e.setupNodesFromList(s,x)
+                    );
+            }
             public void computeHessian()
             {
                 Parallel.ForEach(elemList, (e) =>

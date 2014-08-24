@@ -17,7 +17,8 @@ namespace Minilla3D.Elements
 		public Minilla3D.Elements.integratingPoint[] intP;     //Integrating points
         public Minilla3D.Elements.integratingPoint[] bIntP;     //Integrating Points on border
         protected double[] node;							        //Nodal coordinate (global)
-		protected int[] index;                                    //indeces of the nodes
+        protected double[][] _node;							        //Nodal coordinate (global)
+        protected int[] index;                                    //indeces of the nodes
         double[] gradient;                              //internal force(equivalent nodal force of stress field)
         protected double[,] hess;                                 //Hessian  (Geometric Stiffness only)
         double[] force;                                 //external force(equivalent nodal force of gravity)
@@ -56,6 +57,11 @@ namespace Minilla3D.Elements
                 intP[i]=new integratingPoint(nNode,elemDim);
             }
             node=new double[nDV];
+            _node=new double[4][];
+            for (int s = 0; s < 4; s++)
+            {
+                _node[s] = new double[nDV];
+            }
             index=new int[nNode];
 		    gradient=new double[nDV];
 		    hess=new double [nDV,nDV];
@@ -103,16 +109,26 @@ namespace Minilla3D.Elements
 		{
             Array.Copy(x,node,nDV);
 		}
-		public void setupNodesFromList(double[,] x)
-		{
-			for(int i=0;i<nNode;i++)
-			{
-				for(int j=0;j<__DIM;j++)
-				{
-					node[i*__DIM+j]=x[index[i],j];
-				}
-			}
-		}
+        public void setupNodesFromList(double[,] x)
+        {
+            for (int i = 0; i < nNode; i++)
+            {
+                for (int j = 0; j < __DIM; j++)
+                {
+                    node[i * __DIM + j] = x[index[i], j];
+                }
+            }
+        }
+        public void setupNodesFromList(int s,double[,] x)
+        {
+            for (int i = 0; i < nNode; i++)
+            {
+                for (int j = 0; j < __DIM; j++)
+                {
+                    _node[s][i * __DIM + j] = x[index[i], j];
+                }
+            }
+        }
 
 		public double Volume{
 	        get;

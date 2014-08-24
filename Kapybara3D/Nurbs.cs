@@ -54,118 +54,6 @@ namespace Minilla3D.Elements
             public double valD;
             public double valDc;
             public double[] gradD;
-            public void computeGradTangent()
-            {
-                if (gradD == null) gradD = new double[nDV/3];
-                if (elemDim != 2) return;
-                if (dcdt == null) return;
-                if (dcdt.Count() != 2) return;
-                dcdtstar[0] = dcdt[1];
-                dcdtstar[1] = -dcdt[0];
-                double gamma = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
-                    {
-                        gamma += dcdt[i] * gij[i, j] * dcdt[j];
-                    }
-                }
-                for (int n = 0; n < nDV / 3; n++)
-                {
-                    for (int i = 0; i < 2; i++)
-                    {
-                        s[i]= d1[i][n];
-                    }
-                    var _valD = 0d;
-                    for (int i = 0; i < 2; i++)
-                    {
-                        for (int j = 0; j < 2; j++)
-                        {
-                            valD += s[i] * Gij[i, j] * dcdtstar[j];
-                        }
-                    }
-                    _valD *= refDv;
-                    _valD /= Math.Sqrt(gamma);
-                    gradD[n] = _valD;
-                }                
-            }
-            public void computeTangent()
-            {
-                if (elemDim != 2) return;
-                if (dcdt == null) return;
-                if (dcdt.Count() != 2) return;
-                dcdtstar[0] = dcdt[1];
-                dcdtstar[1] = -dcdt[0];
-                double gamma = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
-                    {
-                        gamma += dcdt[i] * gij[i, j] * dcdt[j];
-                    }
-                }
-                //s[i]=d\phi/d\theta^i
-                for (int i = 0; i < 2; i++)
-                {
-                    s[i] = 0;
-                    for (int k = 0; k < nDV; k++)
-                    {
-                        s[i] += C[i, 2, k];
-                    }
-                }
-                valD = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
-                    {
-                        valD += s[i] * Gij[i, j] * dcdtstar[j];
-                    }
-                }
-                valD *= refDv;
-                valD /= Math.Sqrt(gamma);
-            }
-            public void computeTangent(double a, double b, double c, double d)
-            {
-                if (elemDim != 2) return;
-                if (dcdt == null) return;
-                if (dcdt.Count() != 2) return;
-                dcdtstar[0] = dcdt[1];
-                dcdtstar[1] = -dcdt[0];
-                double gamma = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
-                    {
-                        gamma += dcdt[i] * gij[i, j] * dcdt[j];
-                    }
-                }
-                double ax = -a/c, ay = -b/c;
-                va[0]=ax * gi[0][0] + ay * gi[0][1];
-                va[1]=ax * gi[1][0] + ay * gi[1][1];
-                //s[i]=d\phi/d\theta^i
-                for (int i = 0; i < 2; i++)
-                {
-                    s[i] = 0;
-                    for (int k = 0; k < nDV; k++)
-                    {
-                        s[i] += C[i, 2, k];
-                    }
-                }
-                valD = 0;
-                valDc = 0;
-                for (int i = 0; i < 2; i++)
-                {
-                    for (int j = 0; j < 2; j++)
-                    {
-                        valD += s[i] * Gij[i, j] * dcdtstar[j];
-                        valDc += va[i] * Gij[i, j] * dcdtstar[j];
-                    }
-                }
-                valD *= refDv;
-                valD /= Math.Sqrt(gamma);
-                valDc *= refDv;
-                valDc /= Math.Sqrt(gamma);
-            }
             public void computeEigenVectors()
             {
                 if (elemDim != 2) return;
@@ -323,6 +211,111 @@ namespace Minilla3D.Elements
                 dcdt = new double[2] { 0, 0 };
             }
         }
+        public void computeGradTangent(tuple tup)
+        {
+            if (tup.gradD == null) tup.gradD = new double[nDV / 3];
+            if (elemDim != 2) return;
+            if (tup.dcdt == null) return;
+            if (tup.dcdt.Count() != 2) return;
+            tup.dcdtstar[0] = tup.dcdt[1];
+            tup.dcdtstar[1] = -tup.dcdt[0];
+            double gamma = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    gamma += tup.dcdt[i] * tup.gij[i, j] * tup.dcdt[j];
+                }
+            }
+            for (int n = 0; n < nDV / 3; n++)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    tup.s[i] = tup.d1[i][n];
+                }
+                var _valD = 0d;
+                for (int i = 0; i < 2; i++)
+                {
+                    for (int j = 0; j < 2; j++)
+                    {
+                        _valD += tup.s[i] * tup.Gij[i, j] * tup.dcdtstar[j];
+                    }
+                }
+                _valD *= tup.refDv;
+                _valD /= Math.Sqrt(gamma);
+                tup.gradD[n] = _valD;
+            }
+        }
+        public void computeTangent(tuple tup)
+        {
+            if (elemDim != 2) return;
+            if (tup.dcdt == null) return;
+            if (tup.dcdt.Count() != 2) return;
+            tup.dcdtstar[0] = tup.dcdt[1];
+            tup.dcdtstar[1] = -tup.dcdt[0];
+            double gamma = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    gamma += tup.dcdt[i] * tup.gij[i, j] * tup.dcdt[j];
+                }
+            }
+            //s[i]=d\phi/d\theta^i
+            for (int i = 0; i < 2; i++)
+            {
+                tup.s[i] = 0;
+                for (int k = 0; k < nDV; k++)
+                {
+                    for (int s = 0; s < 4; s++)
+                    {
+                        tup.s[i] += tup.nf[s] * tup.C[i, 2, k] * _node[s][k];
+                        tup.s[i] += tup.ndf[s][i] * tup.shape[2, k] * _node[s][k];
+                    }
+                }
+            }
+            tup.valD = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    tup.valD += tup.s[i] * tup.Gij[i, j] * tup.dcdtstar[j];
+                }
+            }
+            tup.valD *= tup.refDv;
+            tup.valD /= Math.Sqrt(gamma);
+        }
+        public void computeTangent(tuple tup,double a, double b, double c, double d)
+        {
+            if (elemDim != 2) return;
+            if (tup.dcdt == null) return;
+            if (tup.dcdt.Count() != 2) return;
+            tup.dcdtstar[0] = tup.dcdt[1];
+            tup.dcdtstar[1] = -tup.dcdt[0];
+            double gamma = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    gamma += tup.dcdt[i] * tup.gij[i, j] * tup.dcdt[j];
+                }
+            }
+            double ax = -a / c, ay = -b / c;
+            tup.va[0] = ax * tup.gi[0][0] + ay * tup.gi[0][1];
+            tup.va[1] = ax * tup.gi[1][0] + ay * tup.gi[1][1];
+            //s[i]=d\phi/d\theta^i
+            tup.valDc = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                for (int j = 0; j < 2; j++)
+                {
+                    tup.valDc += tup.va[i] * tup.Gij[i, j] * tup.dcdtstar[j];
+                }
+            }
+            tup.valDc *= tup.refDv;
+            tup.valDc /= Math.Sqrt(gamma);
+        }
+
         public void precompute(tuple tup)
         {
             //Assume M[0] and M[1] are precomputed,

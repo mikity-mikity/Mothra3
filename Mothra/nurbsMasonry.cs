@@ -450,10 +450,19 @@ namespace mikity.ghComponents
                         leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
                         leaf.edgeTuples[num].dcdt = new double[2] { 0, -1 };
                     }
+                    foreach (var tup in leaf.edgeTuples)
+                    {
+                        for (int s = 0; s < 4; s++)
+                        {
+                            tup.nf[s] = leaf.Function[s](tup.ou,tup.ov);
+                            leaf.dFunction[s](tup.ou, tup.ov, tup.ndf[s]);
+                            leaf.ddFunction[s](tup.ou, tup.ov, tup.nddf[s]);
+                        }
+                    }
                     createNurbsElements(leaf);
                     double[,] x;
                     x = new double[leaf.nU * leaf.nV, 3];
-                    Nurbs2x(leaf, x);
+                    Nurbs2x(leaf.srf, x);
                     leaf.myMasonry.setupNodesFromList(x);
                     leaf.myMasonry.computeGlobalCoord();
                     foreach (var e in leaf.myMasonry.elemList)
@@ -476,7 +485,7 @@ namespace mikity.ghComponents
                     createNurbsElements(branch);
                     double[,] x;
                     x = new double[branch.N, 3];
-                    Nurbs2x(branch, x);
+                    Nurbs2x(branch.crv, x);
                     branch.myReinforcement.setupNodesFromList(x);
                     branch.myReinforcement.computeGlobalCoord();
                     foreach (var e in branch.myReinforcement.elemList)
@@ -514,15 +523,12 @@ namespace mikity.ghComponents
                         branch.myReinforcement.elemList[tup.index].precompute(tup);
                         if (branch.branchType == branch.type.kink)
                         {
-                            tup.left.computeTangent();
-                            tup.left.computeGradTangent();
-                            tup.right.computeTangent();
-                            tup.right.computeGradTangent();
+                            branch.left.myMasonry.elemList[tup.index].computeGradTangent(tup.left);
+                            branch.right.myMasonry.elemList[tup.index].computeGradTangent(tup.right);
                         }
                         else if(branch.branchType==branch.type.fix)
                         {
-                            tup.target.computeTangent();
-                            tup.target.computeGradTangent();
+                            branch.target.myMasonry.elemList[tup.index].computeGradTangent(tup.target);
                         }
                         else
                         {
@@ -530,8 +536,8 @@ namespace mikity.ghComponents
                             else
                             {
                                 var vars = branch.slice.pl.GetPlaneEquation();
-                                tup.target.computeTangent(vars[0],vars[1],vars[2],vars[3]);
-                                tup.target.computeGradTangent();
+                                branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target,vars[0],vars[1],vars[2],vars[3]);
+                                branch.target.myMasonry.elemList[tup.index].computeGradTangent(tup.target);
                             }
                         }
                     }
@@ -539,6 +545,35 @@ namespace mikity.ghComponents
                 //call mosek
                 mosek1(listLeaf,listBranch,listNode);
                 //For preview
+                foreach (var leaf in listLeaf)
+                {
+                    double[,] x;
+                    x = new double[leaf.nU * leaf.nV, 3];
+                    for(int s=0;s<4;s++)
+                    {
+                        Nurbs2x(leaf.airySrf[s], x);
+                        leaf.myMasonry.setupNodesFromList(s,x);
+                    }                   
+                }
+                foreach (var branch in listBranch)
+                {
+                    foreach (var tup in branch.tuples)
+                    {
+                        if (branch.branchType == branch.type.kink)
+                        {
+                            branch.left.myMasonry.elemList[tup.index].computeTangent(tup.left);
+                            branch.right.myMasonry.elemList[tup.index].computeTangent(tup.right);
+                        }
+                        else if (branch.branchType == branch.type.fix)
+                        {
+                            //branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target);
+                        }
+                        else
+                        {
+                            branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target);
+                        }
+                    }
+                }
                 crossMagenta.Clear();
                 crossCyan.Clear();
                 foreach (var leaf in listLeaf)
@@ -666,6 +701,7 @@ namespace mikity.ghComponents
             {
                 myControlBox.EnableRadio(s, (i) => { currentAiry = i; this.ExpirePreview(true); });
             }
+            currentAiry = 4;
 /*            myControlBox.setFunctionToCompute(() =>
             {
                 if (lastComputed == 3) return;

@@ -24,7 +24,7 @@ namespace mikity.ghComponents
             {
                 args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
             }
-            if (listSlice != null)
+            /*if (listSlice != null)
             {
                 foreach (var slice in listSlice)
                 {
@@ -34,7 +34,7 @@ namespace mikity.ghComponents
                         args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5) }, System.Drawing.Color.Azure, true);
                     }
                 }
-            }
+            }*/
             foreach (var branch in listBranch)
             {
                 switch (branch.branchType)
@@ -73,6 +73,40 @@ namespace mikity.ghComponents
                 if (branch.airyCrv != null)
                 {
                     args.Display.DrawCurve(branch.airyCrv, System.Drawing.Color.SeaGreen, 4);
+                }
+            }
+            if (listBranch != null)
+            {
+                foreach (var branch in listBranch)
+                {
+                    if (branch.branchType == branch.type.kink)
+                    {
+                        if (branch.tuples != null)
+                        {
+                            foreach (var tup in branch.tuples)
+                            {
+                                var D = (tup.left.valD/* + tup.right.valD*/)/50d;
+                                if (D > 0)
+                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
+                                else
+                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Yellow);
+                            }
+                        }
+                    }
+                    else /*if (branch.branchType != branch.type.fix)*/
+                    {
+                        if (branch.tuples != null)
+                        {
+                            foreach (var tup in branch.tuples)
+                            {
+                                var D = (tup.target.valD/* - tup.target.valDc*/)/50d;
+                                if (D > 0)
+                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
+                                else
+                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Yellow);
+                            }
+                        }
+                    }
                 }
             }
             /*
