@@ -422,7 +422,7 @@ namespace mikity.ghComponents
                                 task.putconbound(branch.conOffset + branch.N + i, mosek.boundkey.fx, 0, 0);
                                 task.putaij(branch.conOffset + branch.N + i, branch.varOffset + branch.N, -1);
                                 task.putaij(branch.conOffset + branch.N + i, branch.varOffset + i, 1);
-                                task.putcj(branch.varOffset + branch.N, 1);
+                                //task.putcj(branch.varOffset + branch.N, 1);
                             }
                         }
                     }

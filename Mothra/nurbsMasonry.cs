@@ -512,6 +512,28 @@ namespace mikity.ghComponents
                     foreach (var tup in branch.tuples)
                     {
                         branch.myReinforcement.elemList[tup.index].precompute(tup);
+                        if (branch.branchType == branch.type.kink)
+                        {
+                            tup.left.computeTangent();
+                            tup.left.computeGradTangent();
+                            tup.right.computeTangent();
+                            tup.right.computeGradTangent();
+                        }
+                        else if(branch.branchType==branch.type.fix)
+                        {
+                            tup.target.computeTangent();
+                            tup.target.computeGradTangent();
+                        }
+                        else
+                        {
+                            if (branch.slice == null) AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need a plane");
+                            else
+                            {
+                                var vars = branch.slice.pl.GetPlaneEquation();
+                                tup.target.computeTangent(vars[0],vars[1],vars[2],vars[3]);
+                                tup.target.computeGradTangent();
+                            }
+                        }
                     }
                 }
                 //call mosek
