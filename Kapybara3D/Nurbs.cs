@@ -251,6 +251,15 @@ namespace Minilla3D.Elements
             if (elemDim != 2) return;
             if (tup.dcdt == null) return;
             if (tup.dcdt.Count() != 2) return;
+            double Z = 0;
+            for (int i = 0; i < nDV; i++)
+            {
+                for (int s = 0; s < 4; s++)
+                {
+                    Z += tup.nf[s]*tup.shape[2, i] * _node[s][i];
+                }
+            }
+            tup.z = Z;
             tup.dcdtstar[0] = tup.dcdt[1];
             tup.dcdtstar[1] = -tup.dcdt[0];
             double gamma = 0;
@@ -273,7 +282,9 @@ namespace Minilla3D.Elements
                         tup.s[i] += tup.ndf[s][i] * tup.shape[2, k] * _node[s][k];
                     }
                 }
+                tup.gi[i][2] = tup.s[i];
             }
+
             tup.valD = 0;
             for (int i = 0; i < 2; i++)
             {

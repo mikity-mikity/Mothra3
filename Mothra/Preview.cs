@@ -68,6 +68,14 @@ namespace mikity.ghComponents
                         args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
                 }
             }
+            foreach (var leaf in listLeaf)
+            {
+                foreach (var tup in leaf.edgeTuples)
+                {
+                    args.Display.DrawLine(new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x + tup.gi[0][0], tup.y + tup.gi[0][1], tup.z + tup.gi[0][2])), System.Drawing.Color.DarkCyan);
+                    args.Display.DrawLine(new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x + tup.gi[1][0], tup.y + tup.gi[1][1], tup.z + tup.gi[1][2])), System.Drawing.Color.DarkCyan);
+                }
+            }
             foreach(var branch in listBranch)
             {
                 if (branch.airyCrv != null)

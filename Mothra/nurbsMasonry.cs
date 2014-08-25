@@ -523,12 +523,12 @@ namespace mikity.ghComponents
                         branch.myReinforcement.elemList[tup.index].precompute(tup);
                         if (branch.branchType == branch.type.kink)
                         {
-                            branch.left.myMasonry.elemList[tup.index].computeGradTangent(tup.left);
-                            branch.right.myMasonry.elemList[tup.index].computeGradTangent(tup.right);
+                            branch.left.myMasonry.elemList[tup.left.index].computeGradTangent(tup.left);
+                            branch.right.myMasonry.elemList[tup.right.index].computeGradTangent(tup.right);
                         }
                         else if(branch.branchType==branch.type.fix)
                         {
-                            branch.target.myMasonry.elemList[tup.index].computeGradTangent(tup.target);
+                            branch.target.myMasonry.elemList[tup.target.index].computeGradTangent(tup.target);
                         }
                         else
                         {
@@ -536,8 +536,8 @@ namespace mikity.ghComponents
                             else
                             {
                                 var vars = branch.slice.pl.GetPlaneEquation();
-                                branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target,vars[0],vars[1],vars[2],vars[3]);
-                                branch.target.myMasonry.elemList[tup.index].computeGradTangent(tup.target);
+                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target,vars[0],vars[1],vars[2],vars[3]);
+                                branch.target.myMasonry.elemList[tup.target.index].computeGradTangent(tup.target);
                             }
                         }
                     }
@@ -561,16 +561,17 @@ namespace mikity.ghComponents
                     {
                         if (branch.branchType == branch.type.kink)
                         {
-                            branch.left.myMasonry.elemList[tup.index].computeTangent(tup.left);
-                            branch.right.myMasonry.elemList[tup.index].computeTangent(tup.right);
+                            branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
+                            branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
                         }
                         else if (branch.branchType == branch.type.fix)
                         {
-                            //branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target);
+                            branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
                         }
                         else
                         {
-                            branch.target.myMasonry.elemList[tup.index].computeTangent(tup.target);
+
+                            branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
                         }
                     }
                 }
