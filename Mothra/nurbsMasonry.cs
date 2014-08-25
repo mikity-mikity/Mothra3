@@ -290,6 +290,14 @@ namespace mikity.ghComponents
                     var _f3 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*left*/
                     var _f4 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*bottom*/
+                    //var _f1 = new My.Lambda((u, v, u0, v0) => (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
+                    /*right*/
+                    //var _f2 = new My.Lambda((u, v, u0, v0) => (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
+                    /*top*/
+                    //var _f3 = new My.Lambda((u, v, u0, v0) => (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
+                    /*left*/
+                    //var _f4 = new My.Lambda((u, v, u0, v0) => (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
                     var f1 = (Func<double, double, double, double, double>)_f1.Compile();
                     var f2 = (Func<double, double, double, double, double>)_f2.Compile();
                     var f3 = (Func<double, double, double, double, double>)_f3.Compile();
@@ -585,19 +593,19 @@ namespace mikity.ghComponents
                         {
                             if (tuple.eigenValues[i] < 0)
                             {
-                                double s = tuple.eigenValues[i]*0.05;
+                                double s = tuple.eigenValues[i]*0.5;
                                 //double s = 0.1;
-                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0]*s, tuple.y - tuple.eigenVectors[i][1]*s, tuple.z - tuple.eigenVectors[i][2]*s);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0]*s, tuple.y + tuple.eigenVectors[i][1]*s, tuple.z + tuple.eigenVectors[i][2]*s);
+                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
                                 Line line = new Line(S, E);
                                 crossCyan.Add(line);
                             }
                             else
                             {
-                                double s = tuple.eigenValues[i]*0.05;
+                                double s = tuple.eigenValues[i]*0.5;
                                 //double s = 0.1;
                                 Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0]*s, tuple.y + tuple.eigenVectors[i][1]*s, tuple.z + tuple.eigenVectors[i][2]*s);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
                                 Line line = new Line(S, E);
                                 crossMagenta.Add(line);
                             }
