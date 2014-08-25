@@ -23,6 +23,102 @@ namespace mikity.ghComponents
 
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public void defineKinkAngle(branch branch,leaf leaf,mosek.Task task, int numCon, int numVar)
+        {
+            for (int t= 0; t < branch.tuples.Count(); t++)
+            {
+                task.putaij(numCon + t, numVar + t, -1);
+                task.putconbound(numCon + t, mosek.boundkey.fx, 0, 0);
+                var tup = branch.tuples[t];
+                var target = tup.target;
+                target.dcdtstar[0] = target.dcdt[1];
+                target.dcdtstar[1] = -target.dcdt[0];
+                double gamma = 0;
+                for (int i = 0; i < 2; i++)
+                {
+                    for (int j = 0; j < 2; j++)
+                    {
+                        gamma += target.dcdt[i] * target.gij[i, j] * target.dcdt[j];
+                    }
+                }
+                for (int s = 0; s < 4; s++)
+                {
+                    for (int k = 0; k < target.nDV; k++)
+                    {
+                        for (int i = 0; i < 2; i++)
+                        {
+                            target.s[i] = 0;
+                            target.s[i] += target.nf[s] * target.d1[i][k];
+                            target.s[i] += target.ndf[s][i] * target.d0[k];
+
+                        }
+                        var val = 0d;
+                        for (int i = 0; i < 2; i++)
+                        {
+                            for (int j = 0; j < 2; j++)
+                            {
+                                val += target.s[i] * target.Gij[i, j] * target.dcdtstar[j];
+                            }
+                        }
+                        val *= target.refDv;
+                        val /= Math.Sqrt(gamma);
+                        task.putaij(numCon + t, target.internalIndex[k]+s*(leaf.nU*leaf.nV)+leaf.varOffset, val);
+                    }
+                }
+            }
+        }
+        public void defineKinkAngle2(branch branch, leaf leaf1, leaf leaf2, mosek.Task task, int numCon, int numVar)
+        {
+            for (int t = 0; t < branch.tuples.Count(); t++)
+            {
+                task.putaij(numCon + t, numVar + t, -1);
+                task.putconbound(numCon + t, mosek.boundkey.fx, 0, 0);
+                var tup = branch.tuples[t];
+                for (int h = 0; h < 2; h++)
+                {
+                    Minilla3D.Elements.nurbsElement.tuple target = null;
+                    leaf leaf = null;
+                    if (h == 0) { target = tup.left; leaf = leaf1; }
+                    if (h == 1) { target = tup.right; leaf = leaf2; }
+                    target.dcdtstar[0] = target.dcdt[1];
+                    target.dcdtstar[1] = -target.dcdt[0];
+                    double gamma = 0;
+                    for (int i = 0; i < 2; i++)
+                    {
+                        for (int j = 0; j < 2; j++)
+                        {
+                            gamma += target.dcdt[i] * target.gij[i, j] * target.dcdt[j];
+                            gamma += target.dcdt[i] * target.gij[i, j] * target.dcdt[j];
+                        }
+                    }
+                    for (int s = 0; s < 4; s++)
+                    {
+                        for (int k = 0; k < target.nDV; k++)
+                        {
+                            for (int i = 0; i < 2; i++)
+                            {
+                                target.s[i] = 0;
+                                target.s[i] += target.nf[s] * target.d1[i][k];
+                                target.s[i] += target.ndf[s][i] * target.d0[k];
+
+                            }
+                            var val = 0d;
+                            for (int i = 0; i < 2; i++)
+                            {
+                                for (int j = 0; j < 2; j++)
+                                {
+                                    val += target.s[i] * target.Gij[i, j] * target.dcdtstar[j];
+                                }
+                            }
+                            val *= target.refDv;
+                            val /= Math.Sqrt(gamma);
+                            task.putaij(numCon + t, target.internalIndex[k] + s * (leaf.nU * leaf.nV) + leaf.varOffset, val);
+                        }
+                    }
+                }
+            }
+        }
+
         public void tieBranch(branch branch,leaf leaf,mosek.Task task,int num0/*1 or 2*/,int num1/*0 or 1*/)
         {
             if (leaf.branch[0] == branch)
@@ -226,9 +322,9 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.lo;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fr;
                         blx[branch.N + i + branch.varOffset] = 0;
-                        bux[branch.N + i + branch.varOffset] = infinity;
+                        bux[branch.N + i + branch.varOffset] = 0;
                     }
                     //Z height parameter
                     bkx[branch.N + branch.tuples.Count() + branch.varOffset] = mosek.boundkey.fr;
@@ -256,9 +352,9 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.ra;
-                        blx[branch.N + i + branch.varOffset] = 0;
-                        bux[branch.N + i + branch.varOffset] = 10;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fr;
+                        blx[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc;
+                        bux[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc + 10;
                     }
                 }
                 else if (branch.branchType == branch.type.kink)
@@ -444,19 +540,21 @@ namespace mikity.ghComponents
                         {
                             tieBranch(branch, branch.left, task, 2, 0);
                             tieBranch(branch, branch.right, task, 2, 1);
+                            defineKinkAngle2(branch,branch.left,branch.right,task, branch.conOffset + branch.N*2, branch.varOffset + branch.N);
                         }
                         else
                         {
                             tieBranch(branch, branch.target, task, 1, 0);
+                            //defineKinkAngle(branch,branch.target, task, branch.conOffset + branch.N, branch.varOffset + branch.N);
                         }
                         if (branch.branchType == branch.type.reinforce)
                         {
                             //height parameter
                             for (int i = 0; i < branch.N; i++)
                             {
-                                task.putconbound(branch.conOffset + branch.N + i, mosek.boundkey.fx, 0, 0);
-                                task.putaij(branch.conOffset + branch.N + i, branch.varOffset + branch.N + branch.tuples.Count(), -1);
-                                task.putaij(branch.conOffset + branch.N + i, branch.varOffset + i, 1);
+                                task.putconbound(branch.conOffset + branch.N + branch.tuples.Count() + i, mosek.boundkey.fx, 0, 0);
+                                task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + branch.N + branch.tuples.Count(), -1);
+                                task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + i, 1);
                                 //task.putcj(branch.varOffset + branch.N, 1);
                             }
                         }
