@@ -555,7 +555,7 @@ namespace mikity.ghComponents
                                 task.putconbound(branch.conOffset + branch.N + branch.tuples.Count() + i, mosek.boundkey.fx, 0, 0);
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + branch.N + branch.tuples.Count(), -1);
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + i, 1);
-                                //task.putcj(branch.varOffset + branch.N, 1);
+                                task.putcj(branch.varOffset + branch.N + branch.tuples.Count(), 1);
                             }
                         }
                     }
