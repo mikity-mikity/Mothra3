@@ -367,7 +367,7 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.up;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.lo;
                         blx[branch.N + i + branch.varOffset] = 0;
                         bux[branch.N + i + branch.varOffset] = 0;
                     }
