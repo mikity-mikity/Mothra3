@@ -93,7 +93,7 @@ namespace mikity.ghComponents
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                var D = (tup.left.valD/* + tup.right.valD*/)/50d;
+                                var D = (tup.left.valD + tup.right.valD)/50d;
                                 if (D > 0)
                                     args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
                                 else
@@ -107,7 +107,7 @@ namespace mikity.ghComponents
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                var D = (tup.target.valD/* - tup.target.valDc*/)/50d;
+                                var D = (tup.target.valD - tup.target.valDc)/50d;
                                 if (D > 0)
                                     args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
                                 else
