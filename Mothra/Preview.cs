@@ -31,21 +31,14 @@ namespace mikity.ghComponents
                     args.Display.DrawCurve(error, System.Drawing.Color.Red, 10);
                 }
             }
-            /*if (listSlice != null)
+            if (listSlice != null)
             {
                 foreach (var slice in listSlice)
                 {
-                    if (slice != listSlice.First())
-                    {
-                        var pl = slice.pl;
-                        args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl.PointAt(-5, -5), pl.PointAt(-5, 5), pl.PointAt(5, 5), pl.PointAt(5, -5) }, System.Drawing.Color.Azure, true);
-                    }
+                    var pl = slice.pl;
+                    args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl.PointAt(-2, -2), pl.PointAt(-2, 2), pl.PointAt(2, 2), pl.PointAt(2, -2) }, System.Drawing.Color.Azure, true);
                 }
-            }*/
-            /*if (pl1 != null)
-            {
-                args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl1.PointAt(-5, -5), pl1.PointAt(-5, 5), pl1.PointAt(5, 5), pl1.PointAt(5, -5) }, System.Drawing.Color.Azure, true);
-            }*/
+            }
             foreach (var branch in listBranch)
             {
                 switch (branch.branchType)

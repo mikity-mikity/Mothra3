@@ -98,7 +98,6 @@ namespace mikity.ghComponents
         {
             public Plane pl;
             public int varOffset;
-            double a, b, c, d;
             public slice(Plane _pl)
             {
                 pl = _pl;
@@ -158,6 +157,11 @@ namespace mikity.ghComponents
             public Func<double, double, double>[] Function;
             public Action<double, double, double[]>[] dFunction;
             public Action<double, double, double[,]>[] ddFunction;
+            public enum type
+            {
+                flat,convex
+            }
+            public type leafType;
         }
         public class dl_ex : Minilla3D.Elements.nurbsCurve.dl
         {
@@ -240,7 +244,7 @@ namespace mikity.ghComponents
         List<Point3d> a2;
         List<Line> crossCyan;
         List<Line> crossMagenta;
-        List<slice> listSliceI,listSliceE;
+        List<slice> listSlice;
         List<NurbsCurve> listError;
         Plane pl1;
         int lastComputed = -1;
@@ -266,7 +270,8 @@ namespace mikity.ghComponents
         {
             pManager.AddSurfaceParameter("listSurface", "lstSrf", "list of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddCurveParameter("listCurve", "lstCrv", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
-            pManager.AddTextParameter("listType", "lstType", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddTextParameter("listType", "lstSrfType", "list of types of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddTextParameter("listType", "lstCrvType", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
         }
         protected override void RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager pManager)
         {
@@ -293,30 +298,6 @@ namespace mikity.ghComponents
                     var _f3 = new My.Lambda((u, v, u0, v0) =>0d);// u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*left*/
                     var _f4 = new My.Lambda((u, v, u0, v0) =>0d);// (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*bottom*/
-                    //var _f1 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v + v0) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0)  + u * (u - u0) * (v) * (v - 2 * v0)  + (u + u0) * (u - u0) * (v) * (v - v0)  + u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*right*/
-                    //var _f2 = new My.Lambda((u, v, u0, v0) => u * (u - 2 * u0) * (v) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*top*/
-                    //var _f3 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*left*/
-                    //var _f4 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*bottom*/
-                    //var _f1 = new My.Lambda((u, v, u0, v0) => (u * (u - u0) * (v + v0) * (v - v0)) * (u * (u - u0) * (v + v0) * (v - v0)) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*right*/
-                    //var _f2 = new My.Lambda((u, v, u0, v0) => (u * (u - 2 * u0) * (v) * (v - v0)) * (u * (u - 2 * u0) * (v) * (v - v0)) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*top*/
-                    //var _f3 = new My.Lambda((u, v, u0, v0) => (u * (u - u0) * (v) * (v - 2 * v0)) * (u * (u - u0) * (v) * (v - 2 * v0)) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*left*/
-                    //var _f4 = new My.Lambda((u, v, u0, v0) => ((u + u0) * (u - u0) * (v) * (v - v0)) * ((u + u0) * (u - u0) * (v) * (v - v0)) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*bottom*/
-                    //var _f1 = new My.Lambda((u, v, u0, v0) => (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
-                    /*right*/
-                    //var _f2 = new My.Lambda((u, v, u0, v0) => (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
-                    /*top*/
-                    //var _f3 = new My.Lambda((u, v, u0, v0) => (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
-                    /*left*/
-                    //var _f4 = new My.Lambda((u, v, u0, v0) => (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) / Math.Sqrt((-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) * (-u * (u - u0)) * ((v) * (v - 2 * v0) + v0 * v0) + (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) * (-v * (v - v0)) * ((u + u0) * (u - u0) + u0 * u0) + (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) * (-u * (u - u0)) * ((v + v0) * (v - v0) + v0 * v0) + (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0) * (-v * (v - v0)) * ((u) * (u - 2 * u0) + u0 * u0)));
                     var f1 = (Func<double, double, double, double, double>)_f1.Compile();
                     var f2 = (Func<double, double, double, double, double>)_f2.Compile();
                     var f3 = (Func<double, double, double, double, double>)_f3.Compile();
@@ -685,14 +666,16 @@ namespace mikity.ghComponents
             init();
             _listSrf = new List<Surface>();
             _listCrv = new List<Curve>();
-            List<string> types = new List<string>();
+            List<string> srfTypes = new List<string>();
+            List<string> crvTypes = new List<string>();
             if (!DA.GetDataList(0, _listSrf)) { return; }
             if (!DA.GetDataList(1, _listCrv)) { return; }
-            if (!DA.GetDataList(2, types)) { return;}
-            
-            if(_listCrv.Count!=types.Count){AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
-            listSliceI = new List<slice>();
-            listSliceE = new List<slice>();
+            if (!DA.GetDataList(2, srfTypes)) { return; }
+            if (!DA.GetDataList(3, crvTypes)) { return; }
+
+            if (_listSrf.Count != srfTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for surfaces"); return; }
+            if (_listCrv.Count != crvTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
+            listSlice = new List<slice>();
             listLeaf = new List<leaf>();
             listBranch = new List<branch>();
             listNode=new List<node>();
@@ -707,7 +690,7 @@ namespace mikity.ghComponents
                 branch.nElem = branch.N - branch.dDim;
                 branch.scaleT = (branch.dom.T1 - branch.dom.T0) / branch.nElem;
                 branch.originT = branch.dom.T0;
-                switch (types[i])
+                switch (crvTypes[i])
                 {
                     case "reinforce":
                         branch.branchType = branch.type.reinforce;
@@ -734,6 +717,8 @@ namespace mikity.ghComponents
                 myControlBox.EnableRadio(s, (i) => { currentAiry = i; this.ExpirePreview(true); });
             }
             currentAiry = 4;
+            myControlBox.clearSliders();
+
 /*            myControlBox.setFunctionToCompute(() =>
             {
                 if (lastComputed == 3) return;
@@ -743,31 +728,30 @@ namespace mikity.ghComponents
                 myControlBox.EnableRadio(lastComputed, (i) => { currentAiry = i; resultToPreview(i); this.ExpirePreview(true); });
             }
                 );*/
-            /*pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-            myControlBox.clearSliders();
-            var slider1=myControlBox.addSlider(0, 1, 100, 62);
+            pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+            listSlice.Add(new slice(pl1));
+            /*var slider1=myControlBox.addSlider(0, 1, 100, 62);
             slider1.Converter = (val) => {
                 pl1 = new Plane(new Point3d(0, 0, val / 10d), new Vector3d(0, 0, 1));
                 this.ExpirePreview(true);
                 return val / 10d;
             };*/
-            int ssE = 0;
-            int ssI = 0;
+            int ss = 1;
 
             foreach (var branch in listBranch)
             {
                 if (branch.branchType == branch.type.reinforce)
                 {
-                    var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    listSliceI.Add(new slice(plnew));
-                    branch.slice = listSliceI[ssI];
-                    ssI++;
+                    //var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+                    //listSliceI.Add(new slice(plnew));
+                    branch.slice = listSlice[0];
+                    //ssI++;
                 }
                 if (branch.branchType == branch.type.open)
                 {
                     var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    listSliceE.Add(new slice(plnew));
-                    branch.slice = listSliceE[ssE];
+                    listSlice.Add(new slice(plnew));
+                    branch.slice = listSlice[ss];
                     var slider = myControlBox.addSlider(0, 1, 100, 40);
                     slider.Converter = (val) =>
                     {
@@ -786,7 +770,7 @@ namespace mikity.ghComponents
                         this.ExpirePreview(true);
                         return val / 100d * Math.PI / 2d;
                     };
-                    ssE++;
+                    ss++;
                 }
             }
             // Connect nodes
@@ -847,8 +831,9 @@ namespace mikity.ghComponents
                     newNode.z = Q.Z;
                 }
             }
-            foreach (var srf in _listSrf)
+            for(int i=0;i<_listSrf.Count;i++)
             {
+                var srf = _listSrf[i];
                 var leaf=new leaf();
                 listLeaf.Add(leaf);
                 leaf.srf = srf as NurbsSurface;
@@ -887,7 +872,19 @@ namespace mikity.ghComponents
                 //(0,1)->(0,0)
                 curve = leaf.srf.IsoCurve(1, domainU.T0) as NurbsCurve;
                 leaf.flip[3] = findCurve(leaf, ref leaf.branch[3], listBranch, curve);//left
-                
+                switch (srfTypes[i])
+                {
+                    case "convex":
+                        leaf.leafType = leaf.type.convex;
+                        break;
+                    case "flat":
+                        leaf.leafType = leaf.type.flat;
+                        break;
+                    default:
+                        AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "type should be either of convex or flat");
+                        return;
+                }
+
             }
         }
     }
