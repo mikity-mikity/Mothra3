@@ -35,6 +35,10 @@ namespace mikity.ghComponents
                     }
                 }
             }*/
+            /*if (pl1 != null)
+            {
+                args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl1.PointAt(-5, -5), pl1.PointAt(-5, 5), pl1.PointAt(5, 5), pl1.PointAt(5, -5) }, System.Drawing.Color.Azure, true);
+            }*/
             foreach (var branch in listBranch)
             {
                 switch (branch.branchType)

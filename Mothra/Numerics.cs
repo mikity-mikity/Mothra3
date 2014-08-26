@@ -151,7 +151,7 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        int s = 1;
+                        int s = 0;
                         //for (int s = 0; s < 4; s++)
                         //{
                             task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
@@ -175,7 +175,7 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        int s = 2;
+                        int s = 0;
                         //for (int s = 0; s < 4; s++)
                         //{
                             task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
@@ -200,7 +200,7 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
-                        int s = 3;
+                        int s = 0;
                         //for (int s = 0; s < 4; s++)
                         //{
                             task.putconbound(i * num0 + num1 + branch.conOffset /*+ s * branch.N * num0*/, mosek.boundkey.fx, 0, 0);
@@ -228,6 +228,11 @@ namespace mikity.ghComponents
             int[] csub = new int[3];// for cones
             int numvar = 0;
             int numcon = 0;
+            foreach (var slice in listSliceI)
+            {
+                slice.varOffset = numvar;  //1/c,d   1/c:tangent angle  d:height
+                numvar += 2;
+            }
             foreach (var leaf in _listLeaf)
             {
                 leaf.varOffset = numvar;
@@ -247,12 +252,10 @@ namespace mikity.ghComponents
                 else if (branch.branchType == branch.type.reinforce)
                 {
                     numcon += 1 * branch.N; //branch->edge 
-                    numvar++;               //z height variable
-                    numcon += 1 * branch.N; //branch->z height
                 }
                 else
                 {
-                    numcon += 1 * branch.N ;
+                    numcon += 1 * branch.N; //branch->edge 
                 }
                 numcon += branch.tuples.Count();// kink angle definitions.
             }
@@ -304,17 +307,14 @@ namespace mikity.ghComponents
                     //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
                     for (int i = 0; i < branch.N; i++)
                     {
-                        /*if (i == 0 || i == branch.N - 1)
+                        if (i == 0 || i == branch.N - 1)
                         {
-                            bkx[i + branch.varOffset] = mosek.boundkey.fx;
-                            double x = branch.crv.Points[i].Location.X;
-                            double y = branch.crv.Points[i].Location.Y;
-                            double z = (-D - A * x - B * y) / C;
-                            blx[i + branch.varOffset] =  z;
-                            bux[i + branch.varOffset] =  z;
+                            bkx[i + branch.varOffset] = mosek.boundkey.fr;
+                            blx[i + branch.varOffset] = 0;
+                            bux[i + branch.varOffset] = 0;
                         }
                         else
-                        */{
+                        {
                             bkx[i + branch.varOffset] = mosek.boundkey.fr;
                             blx[i + branch.varOffset] = -infinity;
                             bux[i + branch.varOffset] = infinity;
@@ -326,10 +326,6 @@ namespace mikity.ghComponents
                         blx[branch.N + i + branch.varOffset] = 0;
                         bux[branch.N + i + branch.varOffset] = 0;
                     }
-                    //Z height parameter
-                    bkx[branch.N + branch.tuples.Count() + branch.varOffset] = mosek.boundkey.fr;
-                    blx[branch.N + branch.tuples.Count() + branch.varOffset] = -infinity;
-                    bux[branch.N + branch.tuples.Count() + branch.varOffset] = infinity;
                     //kink angle parameter
                 }
                 else if (branch.branchType == branch.type.open)
@@ -352,9 +348,9 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fr;
-                        blx[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc;
-                        bux[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc + 10;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fx;
+                        blx[branch.N + i + branch.varOffset] = branch.tuples[i].target.valDc;
+                        bux[branch.N + i + branch.varOffset] = branch.tuples[i].target.valDc;
                     }
                 }
                 else if (branch.branchType == branch.type.kink)
@@ -545,18 +541,18 @@ namespace mikity.ghComponents
                         else
                         {
                             tieBranch(branch, branch.target, task, 1, 0);
-                            //defineKinkAngle(branch,branch.target, task, branch.conOffset + branch.N, branch.varOffset + branch.N);
+                            defineKinkAngle(branch,branch.target, task, branch.conOffset + branch.N, branch.varOffset + branch.N);
                         }
                         if (branch.branchType == branch.type.reinforce)
                         {
-                            //height parameter
+/*                            //height parameter
                             for (int i = 0; i < branch.N; i++)
                             {
                                 task.putconbound(branch.conOffset + branch.N + branch.tuples.Count() + i, mosek.boundkey.fx, 0, 0);
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + branch.N + branch.tuples.Count(), -1);
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + i, 1);
                                 task.putcj(branch.varOffset + branch.N + branch.tuples.Count(), 1);
-                            }
+                            }*/
                         }
                     }
                     foreach (var node in _listNode)

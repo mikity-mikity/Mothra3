@@ -98,6 +98,7 @@ namespace mikity.ghComponents
         {
             public Plane pl;
             public int varOffset;
+            double a, b, c, d;
             public slice(Plane _pl)
             {
                 pl = _pl;
@@ -239,7 +240,8 @@ namespace mikity.ghComponents
         List<Point3d> a2;
         List<Line> crossCyan;
         List<Line> crossMagenta;
-        List<slice> listSlice;
+        List<slice> listSliceI,listSliceE;
+        Plane pl1;
         int lastComputed = -1;
         int currentAiry = 0;
         private void init()
@@ -249,7 +251,6 @@ namespace mikity.ghComponents
             lastComputed = -1;
             crossCyan = new List<Line>();
             crossMagenta = new List<Line>();
-            listSlice = new List<slice>();
         }
         public Mothra3()
             : base("Mothra3", "Mothra3", "Mothra3", "Kapybara3D", "Computation")
@@ -283,13 +284,21 @@ namespace mikity.ghComponents
                     double area = 1d / ((double)leaf.NN) / ((double)leaf.NN);
                     //setup functions
                     /*bottom*/
-                    var _f1 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v + v0) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    var _f1 = new My.Lambda((u, v, u0, v0) =>1d);// u * (u - u0) * (v + v0) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*right*/
-                    var _f2 = new My.Lambda((u, v, u0, v0) => u * (u - 2 * u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    var _f2 = new My.Lambda((u, v, u0, v0) =>0d);// u * (u - 2 * u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*top*/
-                    var _f3 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    var _f3 = new My.Lambda((u, v, u0, v0) =>0d);// u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*left*/
-                    var _f4 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    var _f4 = new My.Lambda((u, v, u0, v0) =>0d);// (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*bottom*/
+                    //var _f1 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v + v0) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0)  + u * (u - u0) * (v) * (v - 2 * v0)  + (u + u0) * (u - u0) * (v) * (v - v0)  + u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*right*/
+                    //var _f2 = new My.Lambda((u, v, u0, v0) => u * (u - 2 * u0) * (v) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*top*/
+                    //var _f3 = new My.Lambda((u, v, u0, v0) => u * (u - u0) * (v) * (v - 2 * v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
+                    /*left*/
+                    //var _f4 = new My.Lambda((u, v, u0, v0) => (u + u0) * (u - u0) * (v) * (v - v0) / (u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0)));
                     /*bottom*/
                     //var _f1 = new My.Lambda((u, v, u0, v0) => (u * (u - u0) * (v + v0) * (v - v0)) * (u * (u - u0) * (v + v0) * (v - v0)) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
                     /*right*/
@@ -678,6 +687,8 @@ namespace mikity.ghComponents
             if (!DA.GetDataList(2, types)) { return;}
             
             if(_listCrv.Count!=types.Count){AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
+            listSliceI = new List<slice>();
+            listSliceE = new List<slice>();
             listLeaf = new List<leaf>();
             listBranch = new List<branch>();
             listNode=new List<node>();
@@ -728,26 +739,31 @@ namespace mikity.ghComponents
                 myControlBox.EnableRadio(lastComputed, (i) => { currentAiry = i; resultToPreview(i); this.ExpirePreview(true); });
             }
                 );*/
-            var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-            listSlice.Add(new slice(pl1));
+            /*pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
             myControlBox.clearSliders();
             var slider1=myControlBox.addSlider(0, 1, 100, 62);
             slider1.Converter = (val) => {
                 pl1 = new Plane(new Point3d(0, 0, val / 10d), new Vector3d(0, 0, 1));
-                listSlice[0].update(pl1);
                 this.ExpirePreview(true);
                 return val / 10d;
-            };
-            int ss = 1;
-            
+            };*/
+            int ssE = 0;
+            int ssI = 0;
+
             foreach (var branch in listBranch)
             {
-                if (branch.branchType == branch.type.reinforce) branch.slice = listSlice[0];
+                if (branch.branchType == branch.type.reinforce)
+                {
+                    var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+                    listSliceI.Add(new slice(plnew));
+                    branch.slice = listSliceI[ssI];
+                    ssI++;
+                }
                 if (branch.branchType == branch.type.open)
                 {
                     var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    listSlice.Add(new slice(plnew));
-                    branch.slice = listSlice[ss];
+                    listSliceE.Add(new slice(plnew));
+                    branch.slice = listSliceE[ssE];
                     var slider = myControlBox.addSlider(0, 1, 100, 40);
                     slider.Converter = (val) =>
                     {
@@ -764,9 +780,9 @@ namespace mikity.ghComponents
                         plnew = new Plane(O, X, Y);
                         branch.slice.update(plnew);
                         this.ExpirePreview(true);
-                        return val / 100d*Math.PI/2d;
+                        return val / 100d * Math.PI / 2d;
                     };
-                    ss++;
+                    ssE++;
                 }
             }
             // Connect nodes
