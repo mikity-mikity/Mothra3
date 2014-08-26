@@ -24,6 +24,13 @@ namespace mikity.ghComponents
             {
                 args.Display.DrawLines(crossMagenta, System.Drawing.Color.Magenta);
             }
+            if (listError != null)
+            {
+                foreach (var error in listError)
+                {
+                    args.Display.DrawCurve(error, System.Drawing.Color.Red, 10);
+                }
+            }
             /*if (listSlice != null)
             {
                 foreach (var slice in listSlice)

@@ -241,6 +241,7 @@ namespace mikity.ghComponents
         List<Line> crossCyan;
         List<Line> crossMagenta;
         List<slice> listSliceI,listSliceE;
+        List<NurbsCurve> listError;
         Plane pl1;
         int lastComputed = -1;
         int currentAiry = 0;
@@ -251,6 +252,7 @@ namespace mikity.ghComponents
             lastComputed = -1;
             crossCyan = new List<Line>();
             crossMagenta = new List<Line>();
+            listError = new List<NurbsCurve>();
         }
         public Mothra3()
             : base("Mothra3", "Mothra3", "Mothra3", "Kapybara3D", "Computation")
@@ -610,19 +612,19 @@ namespace mikity.ghComponents
                         {
                             if (tuple.eigenValues[i] < 0)
                             {
-                                double s = tuple.eigenValues[i]*0.5;
+                                double s = tuple.eigenValues[i]*5;
                                 //double s = 0.1;
-                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s-5);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s-5);
                                 Line line = new Line(S, E);
                                 crossCyan.Add(line);
                             }
                             else
                             {
-                                double s = tuple.eigenValues[i]*0.5;
+                                double s = tuple.eigenValues[i]*5;
                                 //double s = 0.1;
-                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s-5);
+                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s-5);
                                 Line line = new Line(S, E);
                                 crossMagenta.Add(line);
                             }
@@ -632,7 +634,7 @@ namespace mikity.ghComponents
 
             } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
         }
-
+        public int ttt = 0;
         public bool findCurve(leaf leaf,ref branch target, List<branch> listBranch, NurbsCurve curve)
         {
             var Points = curve.Points;
@@ -673,7 +675,9 @@ namespace mikity.ghComponents
                     }
                 }
             }
-            AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "cannnot find");
+            ttt++;
+            AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "cannot find:"+ttt.ToString());
+            listError.Add(curve);
             return false;
         }
         protected override void SolveInstance(Grasshopper.Kernel.IGH_DataAccess DA)
