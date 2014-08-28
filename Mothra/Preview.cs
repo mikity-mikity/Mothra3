@@ -8,6 +8,7 @@ namespace mikity.ghComponents
 {
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
+        public Rhino.Geometry.Transform zDown = Rhino.Geometry.Transform.Translation(0, 0, -15d);
 
         public override void DrawViewportWires(Grasshopper.Kernel.IGH_PreviewArgs args)
         {
@@ -59,32 +60,32 @@ namespace mikity.ghComponents
             }
             foreach (var leaf in listLeaf)
             {
-                if (currentAiry < 4)
-                {
-                    if (leaf.airySrf[currentAiry] != null)
-                    {
-                        args.Display.DrawSurface(leaf.airySrf[currentAiry], System.Drawing.Color.Brown, 3);
-                    }
-                }
-                else
-                {
-                    if(leaf.airySrf!=null)
-                        args.Display.DrawSurface(leaf.airySrfCombined, System.Drawing.Color.Brown, 3);
-                }
+                if (leaf.airySrf != null)
+                    args.Display.DrawSurface(leaf.airySrf, System.Drawing.Color.Brown, 3);
             }
             foreach (var leaf in listLeaf)
             {
-                foreach (var tup in leaf.edgeTuples)
+                if (leaf.shellSrf != null)
                 {
-                    args.Display.DrawLine(new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x + tup.gi[0][0], tup.y + tup.gi[0][1], tup.z + tup.gi[0][2])), System.Drawing.Color.DarkCyan);
-                    args.Display.DrawLine(new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x + tup.gi[1][0], tup.y + tup.gi[1][1], tup.z + tup.gi[1][2])), System.Drawing.Color.DarkCyan);
+                    var srf = leaf.shellSrf.Duplicate() as Rhino.Geometry.NurbsSurface;
+                    srf.Transform(zDown);
+                    args.Display.DrawSurface(srf, System.Drawing.Color.Brown, 3);
                 }
             }
-            foreach(var branch in listBranch)
+            foreach (var branch in listBranch)
             {
                 if (branch.airyCrv != null)
                 {
                     args.Display.DrawCurve(branch.airyCrv, System.Drawing.Color.SeaGreen, 4);
+                }
+            }
+            foreach (var branch in listBranch)
+            {
+                if (branch.shellCrv != null)
+                {
+                    var crv = branch.shellCrv.Duplicate() as Rhino.Geometry.NurbsCurve;
+                    crv.Transform(zDown);
+                    args.Display.DrawCurve(crv, System.Drawing.Color.SeaGreen, 3);
                 }
             }
             if (listBranch != null)
@@ -97,11 +98,20 @@ namespace mikity.ghComponents
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                var D = (tup.left.valD + tup.right.valD)/50d;
+                                //var D = (tup.left.valD + tup.right.valD)/50d;
+                                var D = tup.SPK[0, 0]/10d;
                                 if (D > 0)
-                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
+                                {
+                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x,tup.y,tup.z), D);
+                                    circle.Transform(zDown);
+                                    args.Display.DrawCircle(circle, System.Drawing.Color.Blue,2);
+                                }
                                 else
-                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Yellow);
+                                {
+                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
+                                    circle.Transform(zDown);                                    
+                                    args.Display.DrawCircle(circle, System.Drawing.Color.Yellow,2);
+                                }
                             }
                         }
                     }
@@ -111,11 +121,20 @@ namespace mikity.ghComponents
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                var D = (tup.target.valD - tup.target.valDc)/50d;
+                                //var D = (tup.target.valD - tup.target.valDc)/50d;
+                                var D = tup.SPK[0, 0]/10d;
                                 if (D > 0)
-                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Pink);
+                                {
+                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
+                                    circle.Transform(zDown);
+                                    args.Display.DrawCircle(circle, System.Drawing.Color.Blue,2);
+                                }
                                 else
-                                    args.Display.DrawCircle(new Rhino.Geometry.Circle(branch.airyCrv.PointAt(tup.t), D), System.Drawing.Color.Yellow);
+                                {
+                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
+                                    circle.Transform(zDown);
+                                    args.Display.DrawCircle(circle, System.Drawing.Color.Yellow,2);
+                                }
                             }
                         }
                     }

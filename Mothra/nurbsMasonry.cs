@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 
 using Rhino.Geometry;
 
-using My = MyMath.Symbolic;
 
 using Mothra.UI;
 
@@ -111,6 +110,7 @@ namespace mikity.ghComponents
         {
             public NurbsCurve crv;
             public NurbsCurve airyCrv;
+            public NurbsCurve shellCrv;
             public Minilla3D.Objects.reinforcement myReinforcement;
             public leaf target = null;
             public leaf left=null,right=null;
@@ -137,11 +137,10 @@ namespace mikity.ghComponents
             public int varOffset;
             public int conOffset;
             public Minilla3D.Objects.masonry myMasonry;
-
             public NurbsSurface srf;
-            public NurbsSurface[] airySrf=new NurbsSurface[4];
-            public NurbsSurface airySrfCombined;
-            public branch[] branch=new branch[4];
+            public NurbsSurface airySrf;
+            public NurbsSurface shellSrf;
+            public branch[] branch = new branch[4];
             public bool[] flip = new bool[4] { false, false, false, false };
             public int  r;  //Number of tuples.
             public int nU, nV;
@@ -246,14 +245,11 @@ namespace mikity.ghComponents
         List<Line> crossMagenta;
         List<slice> listSlice;
         List<NurbsCurve> listError;
-        Plane pl1;
-        int lastComputed = -1;
-        int currentAiry = 0;
         private void init()
         {
+            ready = false;
             a = new List<Point3d>();
             a2 = new List<Point3d>();
-            lastComputed = -1;
             crossCyan = new List<Line>();
             crossMagenta = new List<Line>();
             listError = new List<NurbsCurve>();
@@ -280,119 +276,32 @@ namespace mikity.ghComponents
         {
             base.AddedToDocument(document);
             myControlBox.Show();
-            myControlBox.setFunctionToCompute2(() => { computeF(); });
+            myControlBox.setFunctionToCompute(() => { computeF(); });
+            myControlBox.setFunctionToCompute2(() => { computeG(); });
         }
+        void computeG()
+        {
+            if (!ready) { System.Windows.Forms.MessageBox.Show("not ready"); return; }
+            mosek2(listLeaf,listBranch,listNode);
+        }
+        bool ready = false;
         void computeF()
         {
-            if (lastComputed == 3) {
-                foreach (var leaf in listLeaf)
+            foreach (var leaf in listLeaf)
+            {
+                leaf.NN = 4;
+                double area = 1d / ((double)leaf.NN) / ((double)leaf.NN);
+                //setup tuples
+                //internal tuples
+                leaf.r = leaf.nUelem * leaf.nVelem * leaf.NN * leaf.NN;
+                leaf.tuples = new tuple_ex[leaf.r];
+                for (int vv = 0; vv < leaf.NN * leaf.nVelem; vv++)
                 {
-                    leaf.NN = 4;
-                    double area = 1d / ((double)leaf.NN) / ((double)leaf.NN);
-                    //setup functions
-                    /*bottom*/
-                    var _f1 = new My.Lambda((u, v, u0, v0) =>1d);// u * (u - u0) * (v + v0) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*right*/
-                    var _f2 = new My.Lambda((u, v, u0, v0) =>0d);// u * (u - 2 * u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*top*/
-                    var _f3 = new My.Lambda((u, v, u0, v0) =>0d);// u * (u - u0) * (v) * (v - 2 * v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    /*left*/
-                    var _f4 = new My.Lambda((u, v, u0, v0) =>0d);// (u + u0) * (u - u0) * (v) * (v - v0) / Math.Sqrt(u * (u - u0) * (v + v0) * (v - v0) * u * (u - u0) * (v + v0) * (v - v0) + u * (u - u0) * (v) * (v - 2 * v0) * u * (u - u0) * (v) * (v - 2 * v0) + (u + u0) * (u - u0) * (v) * (v - v0) * (u + u0) * (u - u0) * (v) * (v - v0) + u * (u - 2 * u0) * (v) * (v - v0) * u * (u - 2 * u0) * (v) * (v - v0)));
-                    var f1 = (Func<double, double, double, double, double>)_f1.Compile();
-                    var f2 = (Func<double, double, double, double, double>)_f2.Compile();
-                    var f3 = (Func<double, double, double, double, double>)_f3.Compile();
-                    var f4 = (Func<double, double, double, double, double>)_f4.Compile();
-                    leaf.Function[0] = new Func<double, double, double>((u, v) => { return f1(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.Function[1] = new Func<double, double, double>((u, v) => { return f2(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.Function[2] = new Func<double, double, double>((u, v) => { return f3(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.Function[3] = new Func<double, double, double>((u, v) => { return f4(u, v, leaf.nUelem, leaf.nVelem); });
-                    var _df1du = _f1.Derive("u");
-                    var _df1dv = _f1.Derive("v");
-                    var _df2du = _f2.Derive("u");
-                    var _df2dv = _f2.Derive("v");
-                    var _df3du = _f3.Derive("u");
-                    var _df3dv = _f3.Derive("v");
-                    var _df4du = _f4.Derive("u");
-                    var _df4dv = _f4.Derive("v");
-                    var df1du = (Func<double, double, double, double, double>)_df1du.Compile();
-                    var df1dv = (Func<double, double, double, double, double>)_df1dv.Compile();
-                    var df2du = (Func<double, double, double, double, double>)_df2du.Compile();
-                    var df2dv = (Func<double, double, double, double, double>)_df2dv.Compile();
-                    var df3du = (Func<double, double, double, double, double>)_df3du.Compile();
-                    var df3dv = (Func<double, double, double, double, double>)_df3dv.Compile();
-                    var df4du = (Func<double, double, double, double, double>)_df4du.Compile();
-                    var df4dv = (Func<double, double, double, double, double>)_df4dv.Compile();
-                    leaf.dFunction[0] = new Action<double, double, double[]>((u, v, res) => { res[0] = df1du(u, v, leaf.nUelem, leaf.nVelem); res[1] = df1dv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.dFunction[1] = new Action<double, double, double[]>((u, v, res) => { res[0] = df2du(u, v, leaf.nUelem, leaf.nVelem); res[1] = df2dv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.dFunction[2] = new Action<double, double, double[]>((u, v, res) => { res[0] = df3du(u, v, leaf.nUelem, leaf.nVelem); res[1] = df3dv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.dFunction[3] = new Action<double, double, double[]>((u, v, res) => { res[0] = df4du(u, v, leaf.nUelem, leaf.nVelem); res[1] = df4dv(u, v, leaf.nUelem, leaf.nVelem); });
-
-                    var _d2f1dudu = _df1du.Derive("u");
-                    var _d2f1dudv = _df1du.Derive("v");
-                    var _d2f1dvdv = _df1dv.Derive("v");
-                    var _d2f2dudu = _df2du.Derive("u");
-                    var _d2f2dudv = _df2du.Derive("v");
-                    var _d2f2dvdv = _df2dv.Derive("v");
-                    var _d2f3dudu = _df3du.Derive("u");
-                    var _d2f3dudv = _df3du.Derive("v");
-                    var _d2f3dvdv = _df3dv.Derive("v");
-                    var _d2f4dudu = _df4du.Derive("u");
-                    var _d2f4dudv = _df4du.Derive("v");
-                    var _d2f4dvdv = _df4dv.Derive("v");
-                    var d2f1dudu = (Func<double, double, double, double, double>)_d2f1dudu.Compile();
-                    var d2f1dudv = (Func<double, double, double, double, double>)_d2f1dudv.Compile();
-                    var d2f1dvdv = (Func<double, double, double, double, double>)_d2f1dvdv.Compile();
-                    var d2f2dudu = (Func<double, double, double, double, double>)_d2f2dudu.Compile();
-                    var d2f2dudv = (Func<double, double, double, double, double>)_d2f2dudv.Compile();
-                    var d2f2dvdv = (Func<double, double, double, double, double>)_d2f2dvdv.Compile();
-                    var d2f3dudu = (Func<double, double, double, double, double>)_d2f3dudu.Compile();
-                    var d2f3dudv = (Func<double, double, double, double, double>)_d2f3dudv.Compile();
-                    var d2f3dvdv = (Func<double, double, double, double, double>)_d2f3dvdv.Compile();
-                    var d2f4dudu = (Func<double, double, double, double, double>)_d2f4dudu.Compile();
-                    var d2f4dudv = (Func<double, double, double, double, double>)_d2f4dudv.Compile();
-                    var d2f4dvdv = (Func<double, double, double, double, double>)_d2f4dvdv.Compile();
-                    leaf.ddFunction[0] = new Action<double, double, double[,]>((u, v, res) => { res[0, 0] = d2f1dudu(u, v, leaf.nUelem, leaf.nVelem); res[0, 1] = d2f1dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 0] = d2f1dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 1] = d2f1dvdv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.ddFunction[1] = new Action<double, double, double[,]>((u, v, res) => { res[0, 0] = d2f2dudu(u, v, leaf.nUelem, leaf.nVelem); res[0, 1] = d2f2dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 0] = d2f2dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 1] = d2f2dvdv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.ddFunction[2] = new Action<double, double, double[,]>((u, v, res) => { res[0, 0] = d2f3dudu(u, v, leaf.nUelem, leaf.nVelem); res[0, 1] = d2f3dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 0] = d2f3dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 1] = d2f3dvdv(u, v, leaf.nUelem, leaf.nVelem); });
-                    leaf.ddFunction[3] = new Action<double, double, double[,]>((u, v, res) => { res[0, 0] = d2f4dudu(u, v, leaf.nUelem, leaf.nVelem); res[0, 1] = d2f4dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 0] = d2f4dudv(u, v, leaf.nUelem, leaf.nVelem); res[1, 1] = d2f4dvdv(u, v, leaf.nUelem, leaf.nVelem); });
-                    //setup tuples
-                    //internal tuples
-                    leaf.r = leaf.nUelem * leaf.nVelem * leaf.NN * leaf.NN;
-                    leaf.tuples = new tuple_ex[leaf.r];
-                    for (int vv = 0; vv < leaf.NN * leaf.nVelem; vv++)
+                    for (int uu = 0; uu < leaf.NN*leaf.nUelem; uu++)
                     {
-                        for (int uu = 0; uu < leaf.NN*leaf.nUelem; uu++)
-                        {
-                            int num = uu + vv * (leaf.NN * leaf.nUelem);
-                            double centerU = (uu + 0.5) / leaf.NN;
-                            double centerV = (vv + 0.5) / leaf.NN;
-                            //element index
-                            int uNum = (int)centerU;
-                            int vNum = (int)centerV;
-                            int index = uNum + vNum * leaf.nUelem;                            
-                            //local coordinates
-                            double localU = centerU - uNum;
-                            double localV = centerV - vNum;
-                            leaf.tuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
-                            leaf.tuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
-                            
-                            for (int s = 0; s < 4; s++)
-                            {
-                                leaf.tuples[num].nf[s]=leaf.Function[s](centerU, centerV);
-                                leaf.dFunction[s](centerU, centerV, leaf.tuples[num].ndf[s]);
-                                leaf.ddFunction[s](centerU, centerV, leaf.tuples[num].nddf[s]);                                
-                            }
-                        }
-                    }
-                    //edge tuples
-                    leaf.edgeTuples = new tuple_ex[2 * (leaf.nUelem * leaf.NN + leaf.nVelem * leaf.NN)];
-                    //bottom
-                    for (int i = 0; i < leaf.nUelem * leaf.NN; i++)
-                    {
-                        int uu = i, vv = 0;
-                        int num = i;
+                        int num = uu + vv * (leaf.NN * leaf.nUelem);
                         double centerU = (uu + 0.5) / leaf.NN;
-                        double centerV = (vv) / leaf.NN;
+                        double centerV = (vv + 0.5) / leaf.NN;
                         //element index
                         int uNum = (int)centerU;
                         int vNum = (int)centerV;
@@ -400,220 +309,233 @@ namespace mikity.ghComponents
                         //local coordinates
                         double localU = centerU - uNum;
                         double localV = centerV - vNum;
-                        leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
-                        leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
-                        leaf.edgeTuples[num].dcdt = new double[2] {1,0};
-                    }
-                    //right
-                    for (int i = 0; i < leaf.nVelem * leaf.NN; i++)
-                    {
-                        int uu = leaf.nUelem*leaf.NN, vv = i;
-                        int num = i+leaf.nUelem*leaf.NN;
-                        double centerU = (uu) / leaf.NN;
-                        double centerV = (vv + 0.5) / leaf.NN;
-                        //element index
-                        int uNum = (int)(centerU-0.001);
-                        int vNum = (int)centerV;
-                        int index = uNum + vNum * leaf.nUelem;
-                        //local coordinates
-                        double localU = centerU - uNum;
-                        double localV = centerV - vNum;
-                        leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
-                        leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
-                        leaf.edgeTuples[num].dcdt = new double[2] { 0, 1 };
-                    }
-                    //top
-                    for (int i = 0; i < leaf.nUelem * leaf.NN; i++)
-                    {
-                        int uu = i, vv = leaf.nVelem * leaf.NN;
-                        int num = i + leaf.nUelem * leaf.NN + leaf.nVelem * leaf.NN;
-                        double centerU = (uu+0.5) / leaf.NN;
-                        double centerV = (vv) / leaf.NN;
-                        //element index
-                        int uNum = (int)centerU;
-                        int vNum = (int)(centerV-0.0001);
-                        int index = uNum + vNum * leaf.nUelem;
-                        //local coordinates
-                        double localU = centerU - uNum;
-                        double localV = centerV - vNum;
-                        leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
-                        leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
-                        leaf.edgeTuples[num].dcdt = new double[2] { -1, 0 };
-                    }
-                    //left
-                    for (int i = 0; i < leaf.nVelem * leaf.NN; i++)
-                    {
-                        int uu = 0, vv = i;
-                        int num = i + leaf.nUelem * leaf.NN*2 + leaf.nVelem * leaf.NN;
-                        double centerU = (uu) / leaf.NN;
-                        double centerV = (vv + 0.5) / leaf.NN;
-                        //element index
-                        int uNum = (int)centerU;
-                        int vNum = (int)centerV;
-                        int index = uNum + vNum * leaf.nUelem;
-                        //local coordinates
-                        double localU = centerU - uNum;
-                        double localV = centerV - vNum;
-                        leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
-                        leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
-                        leaf.edgeTuples[num].dcdt = new double[2] { 0, -1 };
-                    }
-                    foreach (var tup in leaf.edgeTuples)
-                    {
-                        for (int s = 0; s < 4; s++)
-                        {
-                            tup.nf[s] = leaf.Function[s](tup.ou,tup.ov);
-                            leaf.dFunction[s](tup.ou, tup.ov, tup.ndf[s]);
-                            leaf.ddFunction[s](tup.ou, tup.ov, tup.nddf[s]);
-                        }
-                    }
-                    createNurbsElements(leaf);
-                    double[,] x;
-                    x = new double[leaf.nU * leaf.nV, 3];
-                    Nurbs2x(leaf.srf, x);
-                    leaf.myMasonry.setupNodesFromList(x);
-                    leaf.myMasonry.computeGlobalCoord();
-                    foreach (var e in leaf.myMasonry.elemList)
-                    {
-                        e.precompute();
-                        e.computeBaseVectors();
-                    }
-                    foreach (var tup in leaf.tuples)
-                    {
-                        leaf.myMasonry.elemList[tup.index].precompute(tup);
-                    }
-                    foreach (var tup in leaf.edgeTuples)
-                    {
-                        leaf.myMasonry.elemList[tup.index].precompute(tup);
+                        leaf.tuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
+                        leaf.tuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);                            
                     }
                 }
-                foreach (var branch in listBranch)
+                //edge tuples
+                leaf.edgeTuples = new tuple_ex[2 * (leaf.nUelem * leaf.NN + leaf.nVelem * leaf.NN)];
+                //bottom
+                for (int i = 0; i < leaf.nUelem * leaf.NN; i++)
                 {
-                    branch.NN = 4;
-                    createNurbsElements(branch);
-                    double[,] x;
-                    x = new double[branch.N, 3];
-                    Nurbs2x(branch.crv, x);
-                    branch.myReinforcement.setupNodesFromList(x);
-                    branch.myReinforcement.computeGlobalCoord();
-                    foreach (var e in branch.myReinforcement.elemList)
-                    {
-                        e.precompute();
-                        e.computeBaseVectors();
-                    }
-                    //branch.type
-                    //branch.left,right,target
-                    branch.tuples = new dl_ex[branch.nElem * branch.NN];
-                    for (int i = 0; i < branch.nElem * branch.NN; i++)
-                    {
-                        int tt = i;
-                        int num = i;
-                        double centerT = (tt + 0.5) / branch.NN;
-                        //element index
-                        int tNum = (int)centerT;
-                        int index = tNum;
-                        //local coordinates
-                        double localT = centerT - tNum;
-                        branch.tuples[num] = new dl_ex(centerT, centerT * branch.scaleT + branch.originT, index, localT, 1d / ((double)branch.NN));
-                        branch.tuples[num].init(branch.crv, branch.scaleT);
-                    }
+                    int uu = i, vv = 0;
+                    int num = i;
+                    double centerU = (uu + 0.5) / leaf.NN;
+                    double centerV = (vv) / leaf.NN;
+                    //element index
+                    int uNum = (int)centerU;
+                    int vNum = (int)centerV;
+                    int index = uNum + vNum * leaf.nUelem;                            
+                    //local coordinates
+                    double localU = centerU - uNum;
+                    double localV = centerV - vNum;
+                    leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
+                    leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
+                    leaf.edgeTuples[num].dcdt = new double[2] {1,0};
+                }
+                //right
+                for (int i = 0; i < leaf.nVelem * leaf.NN; i++)
+                {
+                    int uu = leaf.nUelem*leaf.NN, vv = i;
+                    int num = i+leaf.nUelem*leaf.NN;
+                    double centerU = (uu) / leaf.NN;
+                    double centerV = (vv + 0.5) / leaf.NN;
+                    //element index
+                    int uNum = (int)(centerU-0.001);
+                    int vNum = (int)centerV;
+                    int index = uNum + vNum * leaf.nUelem;
+                    //local coordinates
+                    double localU = centerU - uNum;
+                    double localV = centerV - vNum;
+                    leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
+                    leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
+                    leaf.edgeTuples[num].dcdt = new double[2] { 0, 1 };
+                }
+                //top
+                for (int i = 0; i < leaf.nUelem * leaf.NN; i++)
+                {
+                    int uu = i, vv = leaf.nVelem * leaf.NN;
+                    int num = i + leaf.nUelem * leaf.NN + leaf.nVelem * leaf.NN;
+                    double centerU = (uu+0.5) / leaf.NN;
+                    double centerV = (vv) / leaf.NN;
+                    //element index
+                    int uNum = (int)centerU;
+                    int vNum = (int)(centerV-0.0001);
+                    int index = uNum + vNum * leaf.nUelem;
+                    //local coordinates
+                    double localU = centerU - uNum;
+                    double localV = centerV - vNum;
+                    leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
+                    leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
+                    leaf.edgeTuples[num].dcdt = new double[2] { -1, 0 };
+                }
+                //left
+                for (int i = 0; i < leaf.nVelem * leaf.NN; i++)
+                {
+                    int uu = 0, vv = i;
+                    int num = i + leaf.nUelem * leaf.NN*2 + leaf.nVelem * leaf.NN;
+                    double centerU = (uu) / leaf.NN;
+                    double centerV = (vv + 0.5) / leaf.NN;
+                    //element index
+                    int uNum = (int)centerU;
+                    int vNum = (int)centerV;
+                    int index = uNum + vNum * leaf.nUelem;
+                    //local coordinates
+                    double localU = centerU - uNum;
+                    double localV = centerV - vNum;
+                    leaf.edgeTuples[num] = new tuple_ex(4, centerU, centerV, centerU * leaf.scaleU + leaf.originU, centerV * leaf.scaleV + leaf.originV, index, localU, localV, area);
+                    leaf.edgeTuples[num].init(leaf.srf, leaf.scaleU, leaf.scaleV);
+                    leaf.edgeTuples[num].dcdt = new double[2] { 0, -1 };
+                }
+                createNurbsElements(leaf);
+                double[,] x;
+                x = new double[leaf.nU * leaf.nV, 3];
+                Nurbs2x(leaf.srf, x);
+                leaf.myMasonry.setupNodesFromList(x);
+                leaf.myMasonry.computeGlobalCoord();
+                foreach (var e in leaf.myMasonry.elemList)
+                {
+                    e.precompute();
+                    e.computeBaseVectors();
+                }
+                foreach (var tup in leaf.tuples)
+                {
+                    leaf.myMasonry.elemList[tup.index].precompute(tup);
+                }
+                foreach (var tup in leaf.edgeTuples)
+                {
+                    leaf.myMasonry.elemList[tup.index].precompute(tup);
+                }
+            }
+            foreach (var branch in listBranch)
+            {
+                branch.NN = 4;
+                createNurbsElements(branch);
+                double[,] x;
+                x = new double[branch.N, 3];
+                Nurbs2x(branch.crv, x);
+                branch.myReinforcement.setupNodesFromList(x);
+                branch.myReinforcement.computeGlobalCoord();
+                foreach (var e in branch.myReinforcement.elemList)
+                {
+                    e.precompute();
+                    e.computeBaseVectors();
+                }
+                //branch.type
+                //branch.left,right,target
+                branch.tuples = new dl_ex[branch.nElem * branch.NN];
+                for (int i = 0; i < branch.nElem * branch.NN; i++)
+                {
+                    int tt = i;
+                    int num = i;
+                    double centerT = (tt + 0.5) / branch.NN;
+                    //element index
+                    int tNum = (int)centerT;
+                    int index = tNum;
+                    //local coordinates
+                    double localT = centerT - tNum;
+                    branch.tuples[num] = new dl_ex(centerT, centerT * branch.scaleT + branch.originT, index, localT, 1d / ((double)branch.NN));
+                    branch.tuples[num].init(branch.crv, branch.scaleT);
+                }
+                if (branch.branchType == branch.type.kink)
+                {
+                    tieBranch2(branch, branch.left);
+                    tieBranch2(branch, branch.right);
+                }
+                else
+                {
+                    tieBranch2(branch, branch.target);
+                }
+                foreach (var tup in branch.tuples)
+                {
+                    branch.myReinforcement.elemList[tup.index].precompute(tup);
                     if (branch.branchType == branch.type.kink)
                     {
-                        tieBranch2(branch, branch.left);
-                        tieBranch2(branch, branch.right);
+                        branch.left.myMasonry.elemList[tup.left.index].computeGradTangent(tup.left);
+                        branch.right.myMasonry.elemList[tup.right.index].computeGradTangent(tup.right);
+                    }
+                    else if(branch.branchType==branch.type.fix)
+                    {
+                        branch.target.myMasonry.elemList[tup.target.index].computeGradTangent(tup.target);
                     }
                     else
                     {
-                        tieBranch2(branch, branch.target);
-                    }
-                    foreach (var tup in branch.tuples)
-                    {
-                        branch.myReinforcement.elemList[tup.index].precompute(tup);
-                        if (branch.branchType == branch.type.kink)
+                        if (branch.slice == null) AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need a plane");
+                        else
                         {
-                            branch.left.myMasonry.elemList[tup.left.index].computeGradTangent(tup.left);
-                            branch.right.myMasonry.elemList[tup.right.index].computeGradTangent(tup.right);
-                        }
-                        else if(branch.branchType==branch.type.fix)
-                        {
+                            var vars = branch.slice.pl.GetPlaneEquation();
+                            branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target,vars[0],vars[1],vars[2],vars[3]);
                             branch.target.myMasonry.elemList[tup.target.index].computeGradTangent(tup.target);
                         }
+                    }
+                }
+            }
+            //call mosek
+            mosek1(listLeaf,listBranch,listNode);
+            //For preview
+            foreach (var leaf in listLeaf)
+            {
+                double[,] x;
+                x = new double[leaf.nU * leaf.nV, 3];
+                for(int s=0;s<4;s++)
+                {
+                    Nurbs2x(leaf.airySrf, x);
+                    leaf.myMasonry.setupNodesFromList(x);
+                }                   
+            }
+            foreach (var branch in listBranch)
+            {
+                foreach (var tup in branch.tuples)
+                {
+                    if (branch.branchType == branch.type.kink)
+                    {
+                        branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
+                        branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
+                    }
+                    else if (branch.branchType == branch.type.fix)
+                    {
+                        branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                    }
+                    else
+                    {
+
+                        branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                    }
+                }
+            }
+            crossMagenta.Clear();
+            crossCyan.Clear();
+            foreach (var leaf in listLeaf)
+            {
+                foreach (var tuple in leaf.tuples)
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        if (tuple.eigenValues[i] < 0)
+                        {
+                            double s = tuple.eigenValues[i];
+                            //double s = 0.1;
+                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                            Line line = new Line(S, E);
+                            line.Transform(zDown);
+                            crossCyan.Add(line);
+                        }
                         else
                         {
-                            if (branch.slice == null) AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need a plane");
-                            else
-                            {
-                                var vars = branch.slice.pl.GetPlaneEquation();
-                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target,vars[0],vars[1],vars[2],vars[3]);
-                                branch.target.myMasonry.elemList[tup.target.index].computeGradTangent(tup.target);
-                            }
+                            double s = tuple.eigenValues[i];
+                            //double s = 0.1;
+                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                            Line line = new Line(S, E);
+                            line.Transform(zDown);
+                            crossMagenta.Add(line);
                         }
                     }
                 }
-                //call mosek
-                mosek1(listLeaf,listBranch,listNode);
-                //For preview
-                foreach (var leaf in listLeaf)
-                {
-                    double[,] x;
-                    x = new double[leaf.nU * leaf.nV, 3];
-                    for(int s=0;s<4;s++)
-                    {
-                        Nurbs2x(leaf.airySrf[s], x);
-                        leaf.myMasonry.setupNodesFromList(s,x);
-                    }                   
-                }
-                foreach (var branch in listBranch)
-                {
-                    foreach (var tup in branch.tuples)
-                    {
-                        if (branch.branchType == branch.type.kink)
-                        {
-                            branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
-                            branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
-                        }
-                        else if (branch.branchType == branch.type.fix)
-                        {
-                            branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
-                        }
-                        else
-                        {
-
-                            branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
-                        }
-                    }
-                }
-                crossMagenta.Clear();
-                crossCyan.Clear();
-                foreach (var leaf in listLeaf)
-                {
-                    foreach (var tuple in leaf.tuples)
-                    {
-                        for (int i = 0; i < 2; i++)
-                        {
-                            if (tuple.eigenValues[i] < 0)
-                            {
-                                double s = tuple.eigenValues[i]*5;
-                                //double s = 0.1;
-                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s-5);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s-5);
-                                Line line = new Line(S, E);
-                                crossCyan.Add(line);
-                            }
-                            else
-                            {
-                                double s = tuple.eigenValues[i]*5;
-                                //double s = 0.1;
-                                Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s-5);
-                                Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s-5);
-                                Line line = new Line(S, E);
-                                crossMagenta.Add(line);
-                            }
-                        }
-                    }
-                }
-
-            } else { System.Windows.Forms.MessageBox.Show("Not Ready.");}
+            }
+            ready = true;
+            this.ExpirePreview(true);
         }
         public int ttt = 0;
         public bool findCurve(leaf leaf,ref branch target, List<branch> listBranch, NurbsCurve curve)
@@ -710,32 +632,10 @@ namespace mikity.ghComponents
                 }
                 listBranch.Add(branch);
             }
-            myControlBox.setNumF(5);
-            lastComputed = 3;
-            for (int s = 0; s < 5; s++)
-            {
-                myControlBox.EnableRadio(s, (i) => { currentAiry = i; this.ExpirePreview(true); });
-            }
-            currentAiry = 4;
             myControlBox.clearSliders();
 
-/*            myControlBox.setFunctionToCompute(() =>
-            {
-                if (lastComputed == 3) return;
-                lastComputed++;
-                computeBaseFunction(lastComputed);
-                this.ExpirePreview(true);
-                myControlBox.EnableRadio(lastComputed, (i) => { currentAiry = i; resultToPreview(i); this.ExpirePreview(true); });
-            }
-                );*/
-            pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+            var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
             listSlice.Add(new slice(pl1));
-            /*var slider1=myControlBox.addSlider(0, 1, 100, 62);
-            slider1.Converter = (val) => {
-                pl1 = new Plane(new Point3d(0, 0, val / 10d), new Vector3d(0, 0, 1));
-                this.ExpirePreview(true);
-                return val / 10d;
-            };*/
             int ss = 1;
 
             foreach (var branch in listBranch)

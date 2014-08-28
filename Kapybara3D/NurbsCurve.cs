@@ -14,7 +14,7 @@ namespace Minilla3D.Elements
             public nurbsElement.tuple target;
             public int index;  //element index
             public int[] internalIndex;
-            public int nDV;
+            public int nNode;
             public int elemDim;
             public double area;
 
@@ -87,7 +87,7 @@ namespace Minilla3D.Elements
             //M[0]=fM(uNum,_uDim,_uDim-1,uKnot);
             //M[1]=fM(vNum,_vDim,_vDim-1,vKnot);
             tup.internalIndex = this.index;
-            tup.nDV = nDV / 3;
+            tup.nNode = nDV / 3;
             tup.elemDim = elemDim;
             tup.shape = new double[__DIM, nDV];                        //Global coordinate *coefficient*
             tup.C = new double[elemDim, __DIM, nDV];                //Base vectors *coefficient*

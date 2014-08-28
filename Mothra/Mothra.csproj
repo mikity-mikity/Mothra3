@@ -97,10 +97,6 @@
       <Project>{9e51a541-9813-42a6-bec3-ae7cf3e85b8a}</Project>
       <Name>Minilla3D</Name>
     </ProjectReference>
-    <ProjectReference Include="..\MyMath\MyMath.csproj">
-      <Project>{f4f22c1d-3eaa-455b-9461-aea206b44208}</Project>
-      <Name>MyMath</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="icons\icon29.bmp" />

@@ -14,7 +14,7 @@ namespace Minilla3D.Elements
             public double[] dcdtstar;   //only used for tuples placed on edges.[1,0] for bottom, [0,1] for right, [-1,0] for top, [0,-1] for left
             public int index;  //element index
             public int[] internalIndex;
-            public int nDV;
+            public int nNode;
             public int elemDim;
             public double area;
             int N;   //number of merge function, set to 4
@@ -24,9 +24,6 @@ namespace Minilla3D.Elements
             public double[,][] d2;
             public double[][] d1;
             public double[] d0;
-            public double[] nf;
-            public double[][] ndf;
-            public double[][,] nddf;
             public double x, y, z;
             public double[][] gi;
             public double[][] Gi;
@@ -178,14 +175,6 @@ namespace Minilla3D.Elements
 
                 index = _index;
                 area = _area;
-                nf = new double[N];
-                ndf = new double[N][];
-                nddf = new double[N][,];
-                for (int i = 0; i < N; i++)
-                {
-                    ndf[i] = new double[2];
-                    nddf[i] = new double[2, 2];
-                }
                 x = 0;
                 y = 0;
                 z = 0;
@@ -254,10 +243,7 @@ namespace Minilla3D.Elements
             double Z = 0;
             for (int i = 0; i < nDV; i++)
             {
-                for (int s = 0; s < 4; s++)
-                {
-                    Z += tup.nf[s]*tup.shape[2, i] * _node[s][i];
-                }
+                Z += tup.shape[2, i] * node[i];
             }
             tup.z = Z;
             tup.dcdtstar[0] = tup.dcdt[1];
@@ -276,11 +262,7 @@ namespace Minilla3D.Elements
                 tup.s[i] = 0;
                 for (int k = 0; k < nDV; k++)
                 {
-                    for (int s = 0; s < 4; s++)
-                    {
-                        tup.s[i] += tup.nf[s] * tup.C[i, 2, k] * _node[s][k];
-                        tup.s[i] += tup.ndf[s][i] * tup.shape[2, k] * _node[s][k];
-                    }
+                    tup.s[i] += tup.C[i, 2, k] * node[k];
                 }
                 tup.gi[i][2] = tup.s[i];
             }
@@ -335,7 +317,7 @@ namespace Minilla3D.Elements
 		    //M[0]=fM(uNum,_uDim,_uDim-1,uKnot);
 		    //M[1]=fM(vNum,_vDim,_vDim-1,vKnot);
             tup.internalIndex = this.index;
-            tup.nDV = nDV/3;
+            tup.nNode = nDV/3;
             tup.elemDim = elemDim;
             tup.shape = new double[__DIM, nDV];                        //Global coordinate *coefficient*
             tup.C = new double[elemDim, __DIM, nDV];                //Base vectors *coefficient*

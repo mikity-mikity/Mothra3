@@ -20,29 +20,6 @@ namespace Mothra.UI
     {
         public System.Collections.Generic.List<Mothra.UI.slider> listSlider;
         public newRadioButton[] radioButtonList;
-        public void setNumF(int num)
-        {
-            if (radioButtonList != null)
-            {
-                foreach (var button in radioButtonList)
-                {
-                    this.wrapPanel1.Children.Remove(button);
-                }
-            }
-            radioButtonList = new newRadioButton[num];
-            for (int i = 0; i < num; i++)
-            {
-                radioButtonList[i] = new newRadioButton();
-                radioButtonList[i].number = i;
-                this.wrapPanel1.Children.Add(radioButtonList[i]);
-                radioButtonList[i].radiobutton1.Content = i.ToString();
-            }
-            foreach (var rB in radioButtonList)
-            {
-                rB.radiobutton1.IsEnabled = false;
-                rB.radiobutton1.GroupName = "funcs";
-            }
-        }
         public void setFunctionToCompute(Action func)
         {
             this.Compute.function = func;
