@@ -17,6 +17,7 @@ namespace Minilla3D.Elements
 		public Minilla3D.Elements.integratingPoint[] intP;     //Integrating points
         public Minilla3D.Elements.integratingPoint[] bIntP;     //Integrating Points on border
         protected double[] node;							        //Nodal coordinate (global)
+        protected double[] phi;							        //Nodal coordinate (global)
         protected int[] index;                                    //indeces of the nodes
         double[] gradient;                              //internal force(equivalent nodal force of stress field)
         protected double[,] hess;                                 //Hessian  (Geometric Stiffness only)
@@ -55,8 +56,9 @@ namespace Minilla3D.Elements
             {
                 intP[i]=new integratingPoint(nNode,elemDim);
             }
-            node=new double[nDV];
-            index=new int[nNode];
+            node = new double[nDV];
+            phi = new double[nNode];
+            index = new int[nNode];
 		    gradient=new double[nDV];
 		    hess=new double [nDV,nDV];
 		    force=new double[nDV];
@@ -111,6 +113,13 @@ namespace Minilla3D.Elements
                 {
                     node[i * __DIM + j] = x[index[i], j];
                 }
+            }
+        }
+        public void setupAiryPotentialFromList(double[] x)
+        {
+            for (int i = 0; i < nNode; i++)
+            {
+                phi[i] = x[index[i]];
             }
         }
 

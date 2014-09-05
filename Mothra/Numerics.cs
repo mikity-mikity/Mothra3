@@ -414,17 +414,13 @@ namespace mikity.ghComponents
                                 {
                                     for (int k = 0; k < 3; k++)
                                     {
-                                        var det = tup.SPK[0, 0] * tup.SPK[1, 1] - tup.SPK[0, 1] * tup.SPK[1, 0];
-                                        if (det > 0)
+                                        for (int l = 0; l < 2; l++)
                                         {
-                                            for (int l = 0; l < 2; l++)
+                                            for (int m = 0; m < 2; m++)
                                             {
-                                                for (int m = 0; m < 2; m++)
-                                                {
-                                                    var val = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
-                                                    if (leaf.varOffset + tup.internalIndex[j] * 3 + k > leaf.varOffset + tup.internalIndex[i] * 3 + k) continue;
-                                                    mat[leaf.varOffset + tup.internalIndex[i] * 3 + k, leaf.varOffset + tup.internalIndex[j] * 3 + k] += val;
-                                                }
+                                                var val = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
+                                                if (leaf.varOffset + tup.internalIndex[j] * 3 + k > leaf.varOffset + tup.internalIndex[i] * 3 + k) continue;
+                                                mat[leaf.varOffset + tup.internalIndex[i] * 3 + k, leaf.varOffset + tup.internalIndex[j] * 3 + k] += val;
                                             }
                                         }
                                     }
@@ -432,9 +428,10 @@ namespace mikity.ghComponents
                             }
                         }
                     }
+                    string err = "";
                     foreach (var branch in _listBranch)
                     {
-                        if (branch.branchType != branch.type.open)
+                        if (branch.branchType != branch.type.open && branch.branchType != branch.type.fix)
                         {
                             foreach (var tup in branch.tuples)
                             {
@@ -443,17 +440,14 @@ namespace mikity.ghComponents
                                     for (int j = 0; j < tup.nNode; j++)
                                     {
                                         for (int k = 0; k < 3; k++)
-                                        {
-                                            if (tup.SPK[0, 0] > 0)
+                                        {                                            
+                                            for (int l = 0; l < 1; l++)
                                             {
-                                                for (int l = 0; l < 1; l++)
+                                                for (int m = 0; m < 1; m++)
                                                 {
-                                                    for (int m = 0; m < 1; m++)
-                                                    {
-                                                        var val = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
-                                                        if (branch.varOffset + tup.internalIndex[j] * 3 + k > branch.varOffset + tup.internalIndex[i] * 3 + k) continue;
-                                                        mat[branch.varOffset + tup.internalIndex[i] * 3 + k, branch.varOffset + tup.internalIndex[j] * 3 + k] += val;
-                                                    }
+                                                    var val = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
+                                                    if (branch.varOffset + tup.internalIndex[j] * 3 + k > branch.varOffset + tup.internalIndex[i] * 3 + k) continue;
+                                                    mat[branch.varOffset + tup.internalIndex[i] * 3 + k, branch.varOffset + tup.internalIndex[j] * 3 + k] += val;
                                                 }
                                             }
                                         }
@@ -461,7 +455,17 @@ namespace mikity.ghComponents
                                 }
                             }
                         }
+                        else if (branch.branchType == branch.type.open)
+                        {
+                            foreach (var tup in branch.tuples)
+                            {
+                                err += String.Format("{0},", (int)Math.Log10(tup.SPK[0, 0]));
+                            }
+                        }
                     }
+                    //System.Windows.Forms.MessageBox.Show(String.Format("bad srfTuples:{0}, bad crvTuples:{1}", nn, mm));
+                    System.Windows.Forms.MessageBox.Show(err);
+
                     List<int> _qosubi = new List<int>();
                     List<int> _qosubj = new List<int>();
                     List<double> _qoval = new List<double>();
@@ -943,6 +947,56 @@ namespace mikity.ghComponents
                             break;
 
                     }
+                    //store airy potential
+                    foreach (var leaf in listLeaf)
+                    {
+                        double[] x = new double[leaf.nU * leaf.nV];
+                        for (int j = 0; j < leaf.nV; j++)
+                        {
+                            for (int i = 0; i < leaf.nU; i++)
+                            {
+                                x[i + j * leaf.nU] = xx[i + j * leaf.nU + leaf.varOffset];
+                            }
+                        }
+                        leaf.myMasonry.setupAiryPotentialFromList(x);
+                    }
+                    foreach (var leaf in listLeaf)
+                    {
+                        foreach (var tup in leaf.tuples)
+                        {
+                            leaf.myMasonry.elemList[tup.index].computeStressFunction(tup);
+                        }
+                    }
+                    foreach (var branch in listBranch)
+                    {
+                        double[] x = new double[branch.N];
+                        for (int i = 0; i < branch.N; i++)
+                        {
+                            x[i] = xx[i + branch.varOffset];
+                        }
+                        branch.myArch.setupAiryPotentialFromList(x);
+                    }
+                    foreach (var branch in listBranch)
+                    {
+                        foreach (var tup in branch.tuples)
+                        {
+                            if (branch.branchType == branch.type.kink)
+                            {
+                                branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
+                                branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
+                            }
+                            else if (branch.branchType == branch.type.fix)
+                            {
+                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                            }
+                            else
+                            {
+
+                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                            }
+                        }
+                    }
+                    
                     foreach (var branch in _listBranch)
                     {
                         branch.airyCrv = branch.crv.Duplicate() as NurbsCurve;
@@ -962,11 +1016,18 @@ namespace mikity.ghComponents
                             int D = i + branch.N;
                             if (branch.branchType == branch.type.open)
                             {
-                                branch.tuples[i].H[0, 0] = xx[D + branch.varOffset]-branch.tuples[i].target.valDc;
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].target.valD- branch.tuples[i].target.valDc;
                             }
-                            else
+                            else if (branch.branchType == branch.type.reinforce)
                             {
-                                branch.tuples[i].H[0, 0] = xx[D + branch.varOffset];
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].target.valD;
+                            }
+                            else if (branch.branchType == branch.type.fix)
+                            {
+                                branch.tuples[i].H[0, 0] = 0;
+                            }else
+                            {
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].left.valD + branch.tuples[i].right.valD;
                             }
                             double g = branch.tuples[i].gij[0, 0];
                             branch.tuples[i].SPK[0, 0] = branch.tuples[i].H[0, 0]/ g;
@@ -985,20 +1046,12 @@ namespace mikity.ghComponents
                         }
                         for (int j = 0; j < leaf.r; j++)
                         {
-                            //leaf.tuples[j].z = leaf.airySrf.PointAt(leaf.tuples[j].u, leaf.tuples[j].v).Z;
-                            int N11 = j * 3 + (leaf.nU * leaf.nV); //variable number
-                            int N22 = j * 3 + 1 + (leaf.nU * leaf.nV);
-                            int N12 = j * 3 + 2 + (leaf.nU * leaf.nV);
-                            leaf.tuples[j].H[0, 0] = xx[N11 + leaf.varOffset] * root2;
-                            leaf.tuples[j].H[1, 1] = xx[N22 + leaf.varOffset] * root2;
-                            leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
-                            leaf.tuples[j].H[1, 0] = xx[N12 + leaf.varOffset];
                             //Hodge star
                             double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
-                            leaf.tuples[j].SPK[0, 0] = xx[N22 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[1, 1] = xx[N11 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[0, 1] = -xx[N12 + leaf.varOffset] / g;
-                            leaf.tuples[j].SPK[1, 0] = -xx[N12 + leaf.varOffset] / g;
+                            leaf.tuples[j].SPK[0, 0] = leaf.tuples[j].H[1, 1] / g;//xx[N22 + leaf.varOffset] / g * root2;
+                            leaf.tuples[j].SPK[1, 1] = leaf.tuples[j].H[0, 0] / g;//xx[N11 + leaf.varOffset] / g * root2;
+                            leaf.tuples[j].SPK[0, 1] = -leaf.tuples[j].H[0, 1] / g;//-xx[N12 + leaf.varOffset] / g;
+                            leaf.tuples[j].SPK[1, 0] = -leaf.tuples[j].H[1, 0] / g;//-xx[N12 + leaf.varOffset] / g;
 
                             leaf.tuples[j].computeEigenVectors();
                         }
