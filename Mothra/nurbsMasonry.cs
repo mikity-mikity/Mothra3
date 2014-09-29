@@ -668,7 +668,7 @@ namespace mikity.ghComponents
                         plnew = new Plane(O, X, Y);
                         branch.slice.update(plnew);
                         this.ExpirePreview(true);
-                        return val / 100d * Math.PI / 2d;
+                        return theta;
                     };
                     ss++;
                 }

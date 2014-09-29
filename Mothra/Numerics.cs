@@ -400,7 +400,7 @@ namespace mikity.ghComponents
                     {
                         for (int i = 0; i < leaf.nU * leaf.nV; i++)
                         {
-                            task.putcj(i*3+2+leaf.varOffset, -0.006);//force
+                            task.putcj(i*3+2+leaf.varOffset, -0.02);//force
                         }
                     }
                     ShoNS.Array.SparseDoubleArray mat = new SparseDoubleArray(numvar, numvar);
@@ -408,14 +408,14 @@ namespace mikity.ghComponents
                     {
                         foreach (var tup in leaf.tuples)
                         {
-                            for (int i = 0; i < tup.nNode; i++)
+                            var det = tup.SPK[0, 0] * tup.SPK[1, 1] - tup.SPK[0, 1] * tup.SPK[0, 1];
+                            if (det > 0)
                             {
-                                for (int j = 0; j < tup.nNode; j++)
+                                for (int i = 0; i < tup.nNode; i++)
                                 {
-                                    for (int k = 0; k < 3; k++)
+                                    for (int j = 0; j < tup.nNode; j++)
                                     {
-                                        var det = tup.SPK[0, 0] * tup.SPK[1, 1] - tup.SPK[0, 1] * tup.SPK[1, 0];
-                                        if (det > 0)
+                                        for (int k = 0; k < 3; k++)
                                         {
                                             for (int l = 0; l < 2; l++)
                                             {
@@ -446,13 +446,14 @@ namespace mikity.ghComponents
                                         {
                                             if (tup.SPK[0, 0] > 0)
                                             {
+                                                var val = tup.B[0, 0, i * 3 + k, j * 3 + k] * tup.SPK[0, 0] * tup.refDv * tup.area;
                                                 for (int l = 0; l < 1; l++)
                                                 {
                                                     for (int m = 0; m < 1; m++)
                                                     {
-                                                        var val = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
+                                                        var val2 = tup.B[l, m, i * 3 + k, j * 3 + k] * tup.SPK[l, m] * tup.refDv * tup.area;
                                                         if (branch.varOffset + tup.internalIndex[j] * 3 + k > branch.varOffset + tup.internalIndex[i] * 3 + k) continue;
-                                                        mat[branch.varOffset + tup.internalIndex[i] * 3 + k, branch.varOffset + tup.internalIndex[j] * 3 + k] += val;
+                                                        mat[branch.varOffset + tup.internalIndex[i] * 3 + k, branch.varOffset + tup.internalIndex[j] * 3 + k] += val2;
                                                     }
                                                 }
                                             }
@@ -732,9 +733,9 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.lo;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.ra;
                         blx[branch.N + i + branch.varOffset] = 0;
-                        bux[branch.N + i + branch.varOffset] = 0;
+                        bux[branch.N + i + branch.varOffset] = 0.2;
                     }
                 }
                 else
@@ -855,7 +856,6 @@ namespace mikity.ghComponents
                             }
 
                         }
-                        /*CONE*/
                         //if (leaf.leafType == leaf.type.convex)
                         {
                             for (int i = 0; i < leaf.r; i++)
@@ -873,6 +873,8 @@ namespace mikity.ghComponents
                             }
                         }
                     }
+                    
+                    
                     foreach (var branch in _listBranch)
                     {
                         if (branch.branchType == branch.type.kink)
@@ -880,6 +882,10 @@ namespace mikity.ghComponents
                             tieBranchD1(branch, branch.left, task, 2, 0);
                             tieBranchD1(branch, branch.right, task, 2, 1);
                             defineKinkAngle2(branch,branch.left,branch.right,task, branch.conOffset + branch.N*2, branch.varOffset + branch.N);
+                            for(int i=0;i<branch.tuples.Count();i++)
+                            {
+                                task.putcj(branch.N + branch.varOffset + i,1);
+                            }
                         }
                         else
                         {
