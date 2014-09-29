@@ -82,6 +82,7 @@
     <Compile Include="nurbsInterface.cs" />
     <Compile Include="nurbsMasonry.cs" />
     <Compile Include="GeometryProcessing.cs" />
+    <Compile Include="Masonry.cs" />
     <Compile Include="Utility.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Preview.cs" />

@@ -99,7 +99,7 @@ namespace mikity.ghComponents
                             foreach (var tup in branch.tuples)
                             {
                                 //var D = (tup.left.valD + tup.right.valD)/50d;
-                                var D = tup.H[0, 0]/5d;
+                                var D = tup.SPK[0, 0]/10d;
                                 if (D > 0)
                                 {
                                     var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x,tup.y,tup.z), D);
@@ -122,7 +122,7 @@ namespace mikity.ghComponents
                             foreach (var tup in branch.tuples)
                             {
                                 //var D = (tup.target.valD - tup.target.valDc)/50d;
-                                var D = tup.H[0, 0]/5d;
+                                var D = tup.SPK[0, 0]/10d;
                                 if (D > 0)
                                 {
                                     var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);

@@ -111,7 +111,7 @@ namespace mikity.ghComponents
             public NurbsCurve crv;
             public NurbsCurve airyCrv;
             public NurbsCurve shellCrv;
-            public Minilla3D.Objects.arch myArch;
+            public Minilla3D.Objects.reinforcement myReinforcement;
             public leaf target = null;
             public leaf left=null,right=null;
             public int varOffset;
@@ -153,6 +153,9 @@ namespace mikity.ghComponents
             public Interval domU, domV;
             public tuple_ex[] tuples;
             public tuple_ex[] edgeTuples;
+            public Func<double, double, double>[] Function;
+            public Action<double, double, double[]>[] dFunction;
+            public Action<double, double, double[,]>[] ddFunction;
             public enum type
             {
                 flat,convex
@@ -411,9 +414,9 @@ namespace mikity.ghComponents
                 double[,] x;
                 x = new double[branch.N, 3];
                 Nurbs2x(branch.crv, x);
-                branch.myArch.setupNodesFromList(x);
-                branch.myArch.computeGlobalCoord();
-                foreach (var e in branch.myArch.elemList)
+                branch.myReinforcement.setupNodesFromList(x);
+                branch.myReinforcement.computeGlobalCoord();
+                foreach (var e in branch.myReinforcement.elemList)
                 {
                     e.precompute();
                     e.computeBaseVectors();
@@ -445,7 +448,7 @@ namespace mikity.ghComponents
                 }
                 foreach (var tup in branch.tuples)
                 {
-                    branch.myArch.elemList[tup.index].precompute(tup);
+                    branch.myReinforcement.elemList[tup.index].precompute(tup);
                     if (branch.branchType == branch.type.kink)
                     {
                         branch.left.myMasonry.elemList[tup.left.index].computeGradTangent(tup.left);
@@ -469,6 +472,37 @@ namespace mikity.ghComponents
             }
             //call mosek
             mosek1(listLeaf,listBranch,listNode);
+            //For preview
+            foreach (var leaf in listLeaf)
+            {
+                double[,] x;
+                x = new double[leaf.nU * leaf.nV, 3];
+                for(int s=0;s<4;s++)
+                {
+                    Nurbs2x(leaf.airySrf, x);
+                    leaf.myMasonry.setupNodesFromList(x);
+                }                   
+            }
+            foreach (var branch in listBranch)
+            {
+                foreach (var tup in branch.tuples)
+                {
+                    if (branch.branchType == branch.type.kink)
+                    {
+                        branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
+                        branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
+                    }
+                    else if (branch.branchType == branch.type.fix)
+                    {
+                        branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                    }
+                    else
+                    {
+
+                        branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                    }
+                }
+            }
             crossMagenta.Clear();
             crossCyan.Clear();
             foreach (var leaf in listLeaf)
@@ -717,6 +751,9 @@ namespace mikity.ghComponents
                 leaf.scaleV = (leaf.domV.T1 - leaf.domV.T0) / leaf.nVelem;
                 leaf.originU = leaf.domU.T0;
                 leaf.originV = leaf.domV.T0;
+                leaf.Function = new Func<double, double, double>[4];
+                leaf.dFunction = new Action<double, double, double[]>[4];
+                leaf.ddFunction = new Action<double, double, double[,]>[4];
                 //InputGeometry input = new InputGeometry();  //temporary
                 //int nNode = 11;
                 //int _N = 0;

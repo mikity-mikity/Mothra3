@@ -241,11 +241,11 @@ namespace Minilla3D.Elements
             if (tup.dcdt == null) return;
             if (tup.dcdt.Count() != 2) return;
             double Z = 0;
-            for (int i = 0; i < nNode; i++)
+            for (int i = 0; i < nDV; i++)
             {
-                Z += tup.d0[i] * phi[i];
+                Z += tup.shape[2, i] * node[i];
             }
-            //tup.z = Z;
+            tup.z = Z;
             tup.dcdtstar[0] = tup.dcdt[1];
             tup.dcdtstar[1] = -tup.dcdt[0];
             double gamma = 0;
@@ -260,11 +260,11 @@ namespace Minilla3D.Elements
             for (int i = 0; i < 2; i++)
             {
                 tup.s[i] = 0;
-                for (int k = 0; k < nNode; k++)
+                for (int k = 0; k < nDV; k++)
                 {
-                    tup.s[i] += tup.d1[i][k] * phi[k];
+                    tup.s[i] += tup.C[i, 2, k] * node[k];
                 }
-                //tup.gi[i][2] = tup.s[i];
+                tup.gi[i][2] = tup.s[i];
             }
 
             tup.valD = 0;
@@ -308,34 +308,7 @@ namespace Minilla3D.Elements
             tup.valDc *= tup.refDv;
             tup.valDc /= Math.Sqrt(gamma);
         }
-        public void computeStressFunction(tuple tup)
-        {
-            if (elemDim != 2) return;
-            for (int i = 0; i < 2; i++)
-            {
-                for (int j = 0; j < 2; j++)
-                {
-                    tup.H[i, j] = 0;
-                    for (int k = 0; k < nNode; k++)
-                    {
-                        tup.H[i, j] -= phi[k] * tup.d2[i, j][k];
-                    }
-                }
-            }
-            for (int i = 0; i < 2; i++)
-            {
-                for (int j = 0; j < 2; j++)
-                {
-                    for (int k = 0; k < 2; k++)
-                    {
-                        for (int l = 0; l < nNode; l++)
-                        {
-                            tup.H[i, j] += tup.Gammaijk[i, j, k] * tup.d1[k][l] * phi[l];
-                        }
-                    }
-                }
-            }
-        }
+
         public void precompute(tuple tup)
         {
             //Assume M[0] and M[1] are precomputed,
