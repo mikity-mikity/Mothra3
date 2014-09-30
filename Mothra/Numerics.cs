@@ -289,7 +289,7 @@ namespace mikity.ghComponents
             }
 
         }
-        public void mosek2(List<leaf> _listLeaf, List<branch> _listBranch, List<node> _listNode)
+        public void mosek2(List<leaf> _listLeaf, List<branch> _listBranch, List<node> _listNode,double force)
         {
             double infinity = 0;
             int numvar = 0;
@@ -400,7 +400,7 @@ namespace mikity.ghComponents
                     {
                         for (int i = 0; i < leaf.nU * leaf.nV; i++)
                         {
-                            task.putcj(i*3+2+leaf.varOffset, -0.02);//force
+                            task.putcj(i*3+2+leaf.varOffset, -force);//force
                         }
                     }
                     ShoNS.Array.SparseDoubleArray mat = new SparseDoubleArray(numvar, numvar);
@@ -569,7 +569,7 @@ namespace mikity.ghComponents
                 }
             }
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode,Func<double,double> coeff)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -949,6 +949,56 @@ namespace mikity.ghComponents
                             break;
 
                     }
+                    //store airy potential
+                    foreach (var leaf in listLeaf)
+                    {
+                        double[] x = new double[leaf.nU * leaf.nV];
+                        for (int j = 0; j < leaf.nV; j++)
+                        {
+                            for (int i = 0; i < leaf.nU; i++)
+                            {
+                                x[i + j * leaf.nU] = xx[i + j * leaf.nU + leaf.varOffset];
+                            }
+                        }
+                        leaf.myMasonry.setupAiryPotentialFromList(x);
+                    }
+                    foreach (var leaf in listLeaf)
+                    {
+                        foreach (var tup in leaf.tuples)
+                        {
+                            leaf.myMasonry.elemList[tup.index].computeStressFunction(tup);
+                        }
+                    }
+                    foreach (var branch in listBranch)
+                    {
+                        double[] x = new double[branch.N];
+                        for (int i = 0; i < branch.N; i++)
+                        {
+                            x[i] = xx[i + branch.varOffset];
+                        }
+                        branch.myArch.setupAiryPotentialFromList(x);
+                    }
+                    foreach (var branch in listBranch)
+                    {
+                        foreach (var tup in branch.tuples)
+                        {
+                            if (branch.branchType == branch.type.kink)
+                            {
+                                branch.left.myMasonry.elemList[tup.left.index].computeTangent(tup.left);
+                                branch.right.myMasonry.elemList[tup.right.index].computeTangent(tup.right);
+                            }
+                            else if (branch.branchType == branch.type.fix)
+                            {
+                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                            }
+                            else
+                            {
+
+                                branch.target.myMasonry.elemList[tup.target.index].computeTangent(tup.target);
+                            }
+                        }
+                    }
+                  
                     foreach (var branch in _listBranch)
                     {
                         branch.airyCrv = branch.crv.Duplicate() as NurbsCurve;
@@ -965,17 +1015,26 @@ namespace mikity.ghComponents
                         for(int i=0;i<branch.tuples.Count();i++)
                         {
                             //branch.tuples[i].z = branch.airyCrv.PointAt(branch.tuples[i].t).Z;
-                            int D = i + branch.N;
+                            //int D = i + branch.N;
                             if (branch.branchType == branch.type.open)
                             {
-                                branch.tuples[i].H[0, 0] = xx[D + branch.varOffset]-branch.tuples[i].target.valDc;
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].target.valD - branch.tuples[i].target.valDc;
+                            }
+                            else if (branch.branchType==branch.type.reinforce)
+                            {
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].target.valD;
+                            }
+                            else if (branch.branchType == branch.type.fix)
+                            {
+                                branch.tuples[i].H[0, 0] = 0;
                             }
                             else
                             {
-                                branch.tuples[i].H[0, 0] = xx[D + branch.varOffset];
+                                branch.tuples[i].H[0, 0] = branch.tuples[i].left.valD + branch.tuples[i].right.valD;
                             }
                             double g = branch.tuples[i].gij[0, 0];
-                            branch.tuples[i].SPK[0, 0] = branch.tuples[i].H[0, 0]/ g;
+                            double val = coeff(g);
+                            branch.tuples[i].SPK[0, 0] = branch.tuples[i].H[0, 0]*val;
                         }
                     }
                     foreach (var leaf in _listLeaf)
@@ -995,17 +1054,25 @@ namespace mikity.ghComponents
                             int N11 = j * 3 + (leaf.nU * leaf.nV); //variable number
                             int N22 = j * 3 + 1 + (leaf.nU * leaf.nV);
                             int N12 = j * 3 + 2 + (leaf.nU * leaf.nV);
-                            leaf.tuples[j].H[0, 0] = xx[N11 + leaf.varOffset] * root2;
+                            /*leaf.tuples[j].H[0, 0] = xx[N11 + leaf.varOffset] * root2;
                             leaf.tuples[j].H[1, 1] = xx[N22 + leaf.varOffset] * root2;
                             leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
                             leaf.tuples[j].H[1, 0] = xx[N12 + leaf.varOffset];
+                            */
                             //Hodge star
                             double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
+                            
+                            leaf.tuples[j].SPK[0, 0] = leaf.tuples[j].H[1, 1] / g;//xx[N22 + leaf.varOffset] / g * root2;
+                            leaf.tuples[j].SPK[1, 1] = leaf.tuples[j].H[0, 0] / g;//xx[N11 + leaf.varOffset] / g * root2;
+                            leaf.tuples[j].SPK[0, 1] = -leaf.tuples[j].H[0, 1] / g;//-xx[N12 + leaf.varOffset] / g;
+                            leaf.tuples[j].SPK[1, 0] = -leaf.tuples[j].H[1, 0] / g;//-xx[N12 + leaf.varOffset] / g;
+                            
+                            /*
                             leaf.tuples[j].SPK[0, 0] = xx[N22 + leaf.varOffset] / g * root2;
                             leaf.tuples[j].SPK[1, 1] = xx[N11 + leaf.varOffset] / g * root2;
                             leaf.tuples[j].SPK[0, 1] = -xx[N12 + leaf.varOffset] / g;
                             leaf.tuples[j].SPK[1, 0] = -xx[N12 + leaf.varOffset] / g;
-
+                            */
                             leaf.tuples[j].computeEigenVectors();
                         }
                     }

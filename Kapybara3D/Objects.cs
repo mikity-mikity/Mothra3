@@ -15,7 +15,7 @@ namespace Minilla3D
 		public interface iObject
 		{
 		}
-        public class reinforcement:iObject
+        public class arch:iObject
         {
             public List<Minilla3D.Elements.nurbsCurve> elemList = new List<Elements.nurbsCurve>();
             public void Add(Minilla3D.Elements.nurbsCurve e)
@@ -38,7 +38,12 @@ namespace Minilla3D
                     e.setupNodesFromList(x)
                     );
             }
-
+            public void setupAiryPotentialFromList(double[] x)
+            {
+                Parallel.ForEach(elemList, (e) =>
+                    e.setupAiryPotentialFromList(x)
+                    );
+            }
         }
         public class masonry:iObject{
             public List<Minilla3D.Elements.nurbsElement> elemList = new List<Elements.nurbsElement>();
@@ -78,6 +83,12 @@ namespace Minilla3D
                     e.setupNodesFromList(x)
                     );
             }
+            public void setupAiryPotentialFromList(double[] x)
+            {
+                Parallel.ForEach(elemList, (e) =>
+                    e.setupAiryPotentialFromList(x)
+                    );
+            }            
             public void computeHessian()
             {
                 Parallel.ForEach(elemList, (e) =>

@@ -7,10 +7,26 @@
         <ResourceDictionary Source="/presentationframework.Aero;component/themes/aero.normalcolor.xaml" />
     </Window.Resources>
     <DockPanel Height="Auto" HorizontalAlignment="Stretch" Margin="12" Name="dockPanel1" VerticalAlignment="Stretch" Width="Auto">
-        <WrapPanel Height="Auto" Name="wrapPanel1" Width="Auto" DockPanel.Dock="Top">
-            <mm:newButton x:Name="Compute" Text="Compute Airy stress function"></mm:newButton>
-            <mm:newButton x:Name="Compute2" Text="Compute an equlibriated shape"></mm:newButton>
-        </WrapPanel>
+        <StackPanel DockPanel.Dock="Top">
+            <WrapPanel Height="Auto" Name="wrapPanel1" Width="Auto" >
+                <mm:newButton x:Name="Compute" Text="Compute Airy stress function"></mm:newButton>
+                <mm:newButton x:Name="Compute2" Text="Compute an equlibriated shape"></mm:newButton>
+            </WrapPanel>
+            <WrapPanel>
+                <RadioButton x:Name="Radio1d" Checked="Radio1d_Checked" GroupName="coeff">1</RadioButton>
+                <RadioButton x:Name="Radio2d" Checked="Radio2d_Checked" GroupName="coeff">gamma</RadioButton>
+                <RadioButton x:Name="Radio3d" Checked="Radio3d_Checked" IsChecked="True" GroupName="coeff">1/gamma</RadioButton>
+                <RadioButton x:Name="Radio4d" Checked="Radio4d_Checked" GroupName="coeff">sqrt(gamma)</RadioButton>
+                <RadioButton x:Name="Radio5d" Checked="Radio5d_Checked" GroupName="coeff">sqrt(1/gamma)</RadioButton>
+            </WrapPanel>
+            <WrapPanel>
+                <RadioButton x:Name="Radio1e" Checked="Radio1e_Checked" GroupName="force">0.005</RadioButton>
+                <RadioButton x:Name="Radio2e" Checked="Radio2e_Checked" GroupName="force">0.01</RadioButton>
+                <RadioButton x:Name="Radio3e" Checked="Radio3e_Checked" IsChecked="True" GroupName="force">0.02</RadioButton>
+                <RadioButton x:Name="Radio4e" Checked="Radio4e_Checked" GroupName="force">0.05</RadioButton>
+                <RadioButton x:Name="Radio5e" Checked="Radio5e_Checked" GroupName="force">0.1</RadioButton>
+            </WrapPanel>
+        </StackPanel>
         <StackPanel Height="Auto" Name="stackPanel1" Width="400" HorizontalAlignment="Stretch"></StackPanel>
 
     </DockPanel>

@@ -49,7 +49,7 @@ namespace mikity.ghComponents
             {
                 uKnot[i + branch.N + 1] = branch.N - uDdim;
             }
-            branch.myReinforcement=new Minilla3D.Objects.reinforcement();
+            branch.myArch=new Minilla3D.Objects.arch();
             int[] index = new int[uDim];
             for (int i = 1; i < branch.N - uDdim+1; i++)
             {
@@ -57,7 +57,7 @@ namespace mikity.ghComponents
                 {
                     index[l] = i - 1 + l;
                 }
-                branch.myReinforcement.elemList.Add(new Minilla3D.Elements.nurbsCurve(uDim, index, i, uKnot));
+                branch.myArch.elemList.Add(new Minilla3D.Elements.nurbsCurve(uDim, index, i, uKnot));
             }
         }
 

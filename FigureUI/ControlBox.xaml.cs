@@ -20,6 +20,8 @@ namespace Mothra.UI
     {
         public System.Collections.Generic.List<Mothra.UI.slider> listSlider;
         public newRadioButton[] radioButtonList;
+        public Func<double, double> coeff = null;
+        public double force = 0.02;
         public void setFunctionToCompute(Action func)
         {
             this.Compute.function = func;
@@ -33,6 +35,7 @@ namespace Mothra.UI
             InitializeComponent();
             listSlider = new System.Collections.Generic.List<Mothra.UI.slider>();
             this.Hide();
+
         }
         public void clearSliders()
         {
@@ -76,6 +79,63 @@ namespace Mothra.UI
             radioButtonList[lastComputed].radiobutton1.IsEnabled = true;
             radioButtonList[lastComputed].function = func;
             radioButtonList[lastComputed].number = lastComputed;
+        }
+
+        private void Radio1d_Checked(object sender, RoutedEventArgs e)
+        {
+            coeff = (t) => { return 1; };
+        }
+
+        private void Radio2d_Checked(object sender, RoutedEventArgs e)
+        {
+            coeff = (t) => { return t; };
+
+        }
+
+        private void Radio3d_Checked(object sender, RoutedEventArgs e)
+        {
+            coeff = (t) => { return 1 / t; };
+
+        }
+
+        private void Radio4d_Checked(object sender, RoutedEventArgs e)
+        {
+            coeff = (t) => { return Math.Sqrt(t); };
+
+        }
+
+        private void Radio5d_Checked(object sender, RoutedEventArgs e)
+        {
+            coeff = (t) => { return Math.Sqrt(1 / t); };
+
+        }
+        private void Radio1e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.005;
+        }
+
+        private void Radio2e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.01;
+
+        }
+
+        private void Radio3e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.02;
+
+        }
+
+        private void Radio4e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.05;
+
+        }
+
+        private void Radio5e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.1;
+
         }
     }
 }
