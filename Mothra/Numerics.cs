@@ -569,7 +569,7 @@ namespace mikity.ghComponents
                 }
             }
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode,Func<double,double> coeff)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -884,7 +884,7 @@ namespace mikity.ghComponents
                             defineKinkAngle2(branch,branch.left,branch.right,task, branch.conOffset + branch.N*2, branch.varOffset + branch.N);
                             for(int i=0;i<branch.tuples.Count();i++)
                             {
-                                task.putcj(branch.N + branch.varOffset + i,1);
+                                //task.putcj(branch.N + branch.varOffset + i,1);
                             }
                         }
                         else
@@ -1032,9 +1032,6 @@ namespace mikity.ghComponents
                             {
                                 branch.tuples[i].H[0, 0] = branch.tuples[i].left.valD + branch.tuples[i].right.valD;
                             }
-                            double g = branch.tuples[i].gij[0, 0];
-                            double val = coeff(g);
-                            branch.tuples[i].SPK[0, 0] = branch.tuples[i].H[0, 0]*val;
                         }
                     }
                     foreach (var leaf in _listLeaf)
@@ -1048,36 +1045,69 @@ namespace mikity.ghComponents
                                 leaf.airySrf.Points.SetControlPoint(i, j, new ControlPoint(P.Location.X, P.Location.Y, xx[i + j * leaf.nU  + leaf.varOffset]));
                             }
                         }
-                        for (int j = 0; j < leaf.r; j++)
+                    }
+                }
+            }
+        }
+        void hodgeStar(List<leaf> _listLeaf, List<branch> _listBranch, List<node> _listNode, Func<double, double> coeff)
+        {
+            foreach (var branch in _listBranch)
+            {
+                for (int i = 0; i < branch.tuples.Count(); i++)
+                {
+                    double g = branch.tuples[i].gij[0, 0];
+                    double val = coeff(g);
+                    branch.tuples[i].SPK[0, 0] = branch.tuples[i].H[0, 0] * val;
+                }
+            }
+            foreach (var leaf in _listLeaf)
+            {
+                for (int j = 0; j < leaf.r; j++)
+                {
+                    //Hodge star
+                    double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
+
+                    leaf.tuples[j].SPK[0, 0] = leaf.tuples[j].H[1, 1] / g;//xx[N22 + leaf.varOffset] / g * root2;
+                    leaf.tuples[j].SPK[1, 1] = leaf.tuples[j].H[0, 0] / g;//xx[N11 + leaf.varOffset] / g * root2;
+                    leaf.tuples[j].SPK[0, 1] = -leaf.tuples[j].H[0, 1] / g;//-xx[N12 + leaf.varOffset] / g;
+                    leaf.tuples[j].SPK[1, 0] = -leaf.tuples[j].H[1, 0] / g;//-xx[N12 + leaf.varOffset] / g;
+
+                    leaf.tuples[j].computeEigenVectors();
+                }
+            }
+            //For visualization
+            crossMagenta.Clear();
+            crossCyan.Clear();
+            foreach (var leaf in listLeaf)
+            {
+                foreach (var tuple in leaf.tuples)
+                {
+                    for (int i = 0; i < 2; i++)
+                    {
+                        if (tuple.eigenValues[i] < 0)
                         {
-                            //leaf.tuples[j].z = leaf.airySrf.PointAt(leaf.tuples[j].u, leaf.tuples[j].v).Z;
-                            int N11 = j * 3 + (leaf.nU * leaf.nV); //variable number
-                            int N22 = j * 3 + 1 + (leaf.nU * leaf.nV);
-                            int N12 = j * 3 + 2 + (leaf.nU * leaf.nV);
-                            /*leaf.tuples[j].H[0, 0] = xx[N11 + leaf.varOffset] * root2;
-                            leaf.tuples[j].H[1, 1] = xx[N22 + leaf.varOffset] * root2;
-                            leaf.tuples[j].H[0, 1] = xx[N12 + leaf.varOffset];
-                            leaf.tuples[j].H[1, 0] = xx[N12 + leaf.varOffset];
-                            */
-                            //Hodge star
-                            double g = leaf.tuples[j].refDv * leaf.tuples[j].refDv;
-                            
-                            leaf.tuples[j].SPK[0, 0] = leaf.tuples[j].H[1, 1] / g;//xx[N22 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[1, 1] = leaf.tuples[j].H[0, 0] / g;//xx[N11 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[0, 1] = -leaf.tuples[j].H[0, 1] / g;//-xx[N12 + leaf.varOffset] / g;
-                            leaf.tuples[j].SPK[1, 0] = -leaf.tuples[j].H[1, 0] / g;//-xx[N12 + leaf.varOffset] / g;
-                            
-                            /*
-                            leaf.tuples[j].SPK[0, 0] = xx[N22 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[1, 1] = xx[N11 + leaf.varOffset] / g * root2;
-                            leaf.tuples[j].SPK[0, 1] = -xx[N12 + leaf.varOffset] / g;
-                            leaf.tuples[j].SPK[1, 0] = -xx[N12 + leaf.varOffset] / g;
-                            */
-                            leaf.tuples[j].computeEigenVectors();
+                            double s = tuple.eigenValues[i];
+                            //double s = 0.1;
+                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                            Line line = new Line(S, E);
+                            line.Transform(zDown);
+                            crossCyan.Add(line);
+                        }
+                        else
+                        {
+                            double s = tuple.eigenValues[i];
+                            //double s = 0.1;
+                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
+                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
+                            Line line = new Line(S, E);
+                            line.Transform(zDown);
+                            crossMagenta.Add(line);
                         }
                     }
                 }
             }
+
         }
     }
 }

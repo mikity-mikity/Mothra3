@@ -275,11 +275,21 @@ namespace mikity.ghComponents
             myControlBox.Show();
             myControlBox.setFunctionToCompute(() => { computeF(); });
             myControlBox.setFunctionToCompute2(() => { computeG(); });
+            myControlBox.setFunctionForRadio1(() =>
+            {
+                if (ready)
+                {
+                    hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
+                    ready = true;
+                    this.ExpirePreview(true);
+                }
+            });
         }
         void computeG()
         {
             if (!ready) { System.Windows.Forms.MessageBox.Show("not ready"); return; }
             mosek2(listLeaf, listBranch, listNode, myControlBox.force);
+            this.ExpirePreview(true);
         }
         bool ready = false;
         void computeF()
@@ -468,38 +478,8 @@ namespace mikity.ghComponents
                 }
             }
             //call mosek
-            mosek1(listLeaf,listBranch,listNode,myControlBox.coeff);
-            crossMagenta.Clear();
-            crossCyan.Clear();
-            foreach (var leaf in listLeaf)
-            {
-                foreach (var tuple in leaf.tuples)
-                {
-                    for (int i = 0; i < 2; i++)
-                    {
-                        if (tuple.eigenValues[i] < 0)
-                        {
-                            double s = tuple.eigenValues[i];
-                            //double s = 0.1;
-                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
-                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
-                            Line line = new Line(S, E);
-                            line.Transform(zDown);
-                            crossCyan.Add(line);
-                        }
-                        else
-                        {
-                            double s = tuple.eigenValues[i];
-                            //double s = 0.1;
-                            Point3d S = new Point3d(tuple.x - tuple.eigenVectors[i][0] * s, tuple.y - tuple.eigenVectors[i][1] * s, tuple.z - tuple.eigenVectors[i][2] * s);
-                            Point3d E = new Point3d(tuple.x + tuple.eigenVectors[i][0] * s, tuple.y + tuple.eigenVectors[i][1] * s, tuple.z + tuple.eigenVectors[i][2] * s);
-                            Line line = new Line(S, E);
-                            line.Transform(zDown);
-                            crossMagenta.Add(line);
-                        }
-                    }
-                }
-            }
+            mosek1(listLeaf,listBranch,listNode);
+            hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
             ready = true;
             this.ExpirePreview(true);
         }

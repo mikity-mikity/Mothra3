@@ -20,6 +20,7 @@
                 <RadioButton x:Name="Radio5d" Checked="Radio5d_Checked" GroupName="coeff">sqrt(1/gamma)</RadioButton>
             </WrapPanel>
             <WrapPanel>
+                <RadioButton x:Name="Radio0e" Checked="Radio0e_Checked" GroupName="force">0</RadioButton>
                 <RadioButton x:Name="Radio1e" Checked="Radio1e_Checked" GroupName="force">0.005</RadioButton>
                 <RadioButton x:Name="Radio2e" Checked="Radio2e_Checked" GroupName="force">0.01</RadioButton>
                 <RadioButton x:Name="Radio3e" Checked="Radio3e_Checked" IsChecked="True" GroupName="force">0.02</RadioButton>

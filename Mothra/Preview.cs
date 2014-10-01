@@ -8,7 +8,8 @@ namespace mikity.ghComponents
 {
     public partial class Mothra3 : Grasshopper.Kernel.GH_Component
     {
-        public Rhino.Geometry.Transform zDown = Rhino.Geometry.Transform.Translation(0, 0, -15d);
+        public Rhino.Geometry.Transform zDown_eq = Rhino.Geometry.Transform.Translation(0, 0, 25d);
+        public Rhino.Geometry.Transform zDown = Rhino.Geometry.Transform.Translation(0, 0, 15d);
 
         public override void DrawViewportWires(Grasshopper.Kernel.IGH_PreviewArgs args)
         {
@@ -68,7 +69,7 @@ namespace mikity.ghComponents
                 if (leaf.shellSrf != null)
                 {
                     var srf = leaf.shellSrf.Duplicate() as Rhino.Geometry.NurbsSurface;
-                    srf.Transform(zDown);
+                    srf.Transform(zDown_eq);
                     args.Display.DrawSurface(srf, System.Drawing.Color.Brown, 3);
                 }
             }
@@ -84,59 +85,36 @@ namespace mikity.ghComponents
                 if (branch.shellCrv != null)
                 {
                     var crv = branch.shellCrv.Duplicate() as Rhino.Geometry.NurbsCurve;
-                    crv.Transform(zDown);
+                    crv.Transform(zDown_eq);
                     args.Display.DrawCurve(crv, System.Drawing.Color.SeaGreen, 3);
                 }
             }
-           
+            //find max value of reinforcement
             if (listBranch != null)
             {
                 foreach (var branch in listBranch)
                 {
-                    if (branch.branchType == branch.type.kink)
+                    if (branch.tuples != null)
                     {
-                        if (branch.tuples != null)
+                        if (branch.branchType == branch.type.fix)
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                //var D = (tup.left.valD + tup.right.valD)/50d;
-                                //var D = tup.SPK[0, 0]/10d;
-                                var D = tup.H[0, 0] / 5d;
-                                if (D > 0)
-                                {
-                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x,tup.y,tup.z), D);
-                                    circle.Transform(zDown);
-                                    args.Display.DrawCircle(circle, System.Drawing.Color.Blue,2);
-                                }
-                                else
-                                {
-                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
-                                    circle.Transform(zDown);                                    
-                                    args.Display.DrawCircle(circle, System.Drawing.Color.Yellow,2);
-                                }
+                                var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), 0.5);
+                                circle.Transform(zDown);
+                                args.Display.DrawCircle(circle, System.Drawing.Color.Yellow, 2);
                             }
                         }
-                    }
-                    else 
-                    {
-                        if (branch.tuples != null)
+                        else
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                //var D = (tup.target.valD - tup.target.valDc)/50d;
-                                //var D = tup.SPK[0, 0]/10d;
-                                var D = tup.H[0, 0] / 5d;
+                                var D = Math.Sqrt(tup.SPK[0, 0]);
                                 if (D > 0)
                                 {
-                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
-                                    circle.Transform(zDown);
-                                    args.Display.DrawCircle(circle, System.Drawing.Color.Blue,2);
-                                }
-                                else
-                                {
-                                    var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), D);
-                                    circle.Transform(zDown);
-                                    args.Display.DrawCircle(circle, System.Drawing.Color.Yellow,2);
+                                    var line = new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z + D));
+                                    line.Transform(zDown);
+                                    args.Display.DrawLine(line, System.Drawing.Color.Red, 2);
                                 }
                             }
                         }

@@ -22,6 +22,7 @@ namespace Mothra.UI
         public newRadioButton[] radioButtonList;
         public Func<double, double> coeff = null;
         public double force = 0.02;
+        private Action radio1 = null;
         public void setFunctionToCompute(Action func)
         {
             this.Compute.function = func;
@@ -29,6 +30,10 @@ namespace Mothra.UI
         public void setFunctionToCompute2(Action func)
         {
             this.Compute2.function = func;
+        }
+        public void setFunctionForRadio1(Action func)
+        {
+            radio1 = func;
         }
         public ControlBox()
         {
@@ -84,30 +89,35 @@ namespace Mothra.UI
         private void Radio1d_Checked(object sender, RoutedEventArgs e)
         {
             coeff = (t) => { return 1; };
+            if (radio1 != null) radio1();
         }
 
         private void Radio2d_Checked(object sender, RoutedEventArgs e)
         {
             coeff = (t) => { return t; };
-
+            if (radio1 != null) radio1();
         }
 
         private void Radio3d_Checked(object sender, RoutedEventArgs e)
         {
             coeff = (t) => { return 1 / t; };
-
+            if (radio1 != null) radio1();
         }
 
         private void Radio4d_Checked(object sender, RoutedEventArgs e)
         {
             coeff = (t) => { return Math.Sqrt(t); };
-
+            if (radio1 != null) radio1();
         }
 
         private void Radio5d_Checked(object sender, RoutedEventArgs e)
         {
             coeff = (t) => { return Math.Sqrt(1 / t); };
-
+            if (radio1 != null) radio1();
+        }
+        private void Radio0e_Checked(object sender, RoutedEventArgs e)
+        {
+            force = 0.000;
         }
         private void Radio1e_Checked(object sender, RoutedEventArgs e)
         {
