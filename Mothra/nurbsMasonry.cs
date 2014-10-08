@@ -478,7 +478,7 @@ namespace mikity.ghComponents
                 }
             }
             //call mosek
-            mosek1(listLeaf,listBranch,listNode);
+            mosek1(listLeaf,listBranch,listNode,myControlBox.objective);
             hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
             ready = true;
             this.ExpirePreview(true);

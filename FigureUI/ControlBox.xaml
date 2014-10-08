@@ -27,6 +27,7 @@
                 <RadioButton x:Name="Radio4e" Checked="Radio4e_Checked" GroupName="force">0.05</RadioButton>
                 <RadioButton x:Name="Radio5e" Checked="Radio5e_Checked" GroupName="force">0.1</RadioButton>
             </WrapPanel>
+            <CheckBox x:Name="obj">objective function?</CheckBox>
         </StackPanel>
         <StackPanel Height="Auto" Name="stackPanel1" Width="400" HorizontalAlignment="Stretch"></StackPanel>
 

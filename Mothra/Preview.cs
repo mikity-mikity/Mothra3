@@ -109,7 +109,7 @@ namespace mikity.ghComponents
                         {
                             foreach (var tup in branch.tuples)
                             {
-                                var D = Math.Sqrt(tup.SPK[0, 0]);
+                                var D = tup.SPK[0, 0]/2d;
                                 if (D > 0)
                                 {
                                     var line = new Rhino.Geometry.Line(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z + D));

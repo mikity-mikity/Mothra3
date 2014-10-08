@@ -23,6 +23,13 @@ namespace Mothra.UI
         public Func<double, double> coeff = null;
         public double force = 0.02;
         private Action radio1 = null;
+        public bool objective
+        {
+            get
+            {
+                return (bool)obj.IsChecked;
+            }
+        }
         public void setFunctionToCompute(Action func)
         {
             this.Compute.function = func;

@@ -569,7 +569,7 @@ namespace mikity.ghComponents
                 }
             }
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode,bool obj)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -733,9 +733,19 @@ namespace mikity.ghComponents
                     }
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.ra;
-                        blx[branch.N + i + branch.varOffset] = 0;
-                        bux[branch.N + i + branch.varOffset] = 0.2;
+                        if (obj)
+                        {
+                            bkx[branch.N + i + branch.varOffset] = mosek.boundkey.ra;
+                            blx[branch.N + i + branch.varOffset] = 0;
+                            bux[branch.N + i + branch.varOffset] = 0.2;
+                        }
+                        else
+                        {
+                            bkx[branch.N + i + branch.varOffset] = mosek.boundkey.lo;
+                            blx[branch.N + i + branch.varOffset] = 0;
+                            bux[branch.N + i + branch.varOffset] = infinity;
+                        }
+
                     }
                 }
                 else
@@ -882,9 +892,12 @@ namespace mikity.ghComponents
                             tieBranchD1(branch, branch.left, task, 2, 0);
                             tieBranchD1(branch, branch.right, task, 2, 1);
                             defineKinkAngle2(branch,branch.left,branch.right,task, branch.conOffset + branch.N*2, branch.varOffset + branch.N);
-                            for(int i=0;i<branch.tuples.Count();i++)
+                            if (obj)
                             {
-                                //task.putcj(branch.N + branch.varOffset + i,1);
+                                for (int i = 0; i < branch.tuples.Count(); i++)
+                                {
+                                    task.putcj(branch.N + branch.varOffset + i,1);
+                                }
                             }
                         }
                         else
