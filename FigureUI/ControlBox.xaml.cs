@@ -71,15 +71,24 @@ namespace Mothra.UI
             Mothra.UI.slider s = new Mothra.UI.slider(min, step, max, val, text);
             this.stackPanel1.Children.Add(s);
             s.getSlider.ValueChanged +=new RoutedPropertyChangedEventHandler<double>(this.slider_ValueChanged);
+            s.getCheckBox.Checked += new RoutedEventHandler(this.slider_Checked);
+            s.getCheckBox.Unchecked += new RoutedEventHandler(this.slider_Checked);
             listSlider.Add(s);
             return s;
         }
 
         private void slider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            ((Mothra.UI.slider)(from p in listSlider where (System.Object.ReferenceEquals(p.getSlider,sender))select p).First()).update();
+            ((Mothra.UI.slider)(from p in listSlider where (System.Object.ReferenceEquals(p.getSlider, sender)) select p).First()).update();
         }
 
+        private void slider_Checked(object sender, RoutedEventArgs e)
+        {
+            foreach (var s in listSlider)
+            {
+                s.update();
+            }
+        }
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             e.Cancel = true;

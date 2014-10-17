@@ -24,12 +24,16 @@ namespace Mothra.UI
         {
             get { return this.slider1; }
         }
+        public System.Windows.Controls.CheckBox getCheckBox
+        {
+            get { return this.invert; }
+        }
         public System.Windows.Controls.Label getLabel
         {
             get { return this.label1; }
         }
         public string text;
-        private Func<double, double> _convert;
+        private Func<double, bool,double> _convert;
         public int originalValue
         {
             get
@@ -41,7 +45,7 @@ namespace Mothra.UI
         {
             get
             {
-                return _convert(this.slider1.Value);
+                return _convert(this.slider1.Value,(bool)invert.IsChecked);
             }
         }
         public slider()
@@ -58,7 +62,7 @@ namespace Mothra.UI
             {
                 this.slider1.Ticks.Add(i);
             }
-            _convert = (v) => { return v; };
+            _convert = (v, sign) => { if (sign)return -v; return v; };
             this.text = _text;
             this.update();
         }
@@ -73,7 +77,7 @@ namespace Mothra.UI
                 this.label1.Content = this.text + ":  " + this.value.ToString("0.000");
             }
         }
-        public Func<double, double> Converter
+        public Func<double, bool,double> Converter
         {
             set
             {

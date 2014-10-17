@@ -97,9 +97,16 @@ namespace mikity.ghComponents
         {
             public Plane pl;
             public int varOffset;
-            public slice(Plane _pl)
+            public int conOffset;
+            public double norm = 0;
+            public double a, b, d;
+            public enum type
             {
-                pl = _pl;
+                fr,fx
+            }
+            public type sliceType;
+            public slice()
+            {
             }
             public void update(Plane _pl)
             {
@@ -126,6 +133,7 @@ namespace mikity.ghComponents
             public Interval dom;
             public dl_ex[] tuples;
             public slice slice;
+            public string sliceKey;
             public enum type
             {
                 reinforce,open,kink,fix
@@ -240,7 +248,7 @@ namespace mikity.ghComponents
         List<Point3d> a2;
         List<Line> crossCyan;
         List<Line> crossMagenta;
-        List<slice> listSlice;
+        Dictionary<string, slice> listSlice;
         List<NurbsCurve> listError;
         private void init()
         {
@@ -478,7 +486,7 @@ namespace mikity.ghComponents
                 }
             }
             //call mosek
-            mosek1(listLeaf,listBranch,listNode,myControlBox.objective);
+            mosek1(listLeaf, listBranch, listNode, listSlice, myControlBox.objective);
             hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
             ready = true;
             this.ExpirePreview(true);
@@ -543,10 +551,13 @@ namespace mikity.ghComponents
 
             if (_listSrf.Count != srfTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for surfaces"); return; }
             if (_listCrv.Count != crvTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
-            listSlice = new List<slice>();
+            //listSlice = new List<slice>();
+            listSlice=new Dictionary<string,slice>();
             listLeaf = new List<leaf>();
             listBranch = new List<branch>();
             listNode=new List<node>();
+            myControlBox.clearSliders();
+
             for (int i = 0; i < _listCrv.Count; i++)
             {
                 var branch = new branch();
@@ -558,48 +569,86 @@ namespace mikity.ghComponents
                 branch.nElem = branch.N - branch.dDim;
                 branch.scaleT = (branch.dom.T1 - branch.dom.T0) / branch.nElem;
                 branch.originT = branch.dom.T0;
-                switch (crvTypes[i])
+                if(crvTypes[i].StartsWith("reinforce"))
                 {
-                    case "reinforce":
-                        branch.branchType = branch.type.reinforce;
-                        break;
-                    case "kink":
-                        branch.branchType = branch.type.kink;
-                        break;
-                    case "open":
-                        branch.branchType = branch.type.open;
-                        break;
-                    case "fix":
-                        branch.branchType = branch.type.fix;
-                        break;
-                    default:
+                    branch.branchType = branch.type.reinforce;
+                    var key=crvTypes[i].Replace("reinforce","");
+                    branch.sliceKey=key;
+                    try{
+                        branch.slice=listSlice[key];
+                    }
+                    catch (KeyNotFoundException e){
+                        listSlice[key]=new slice();
+                        branch.slice=listSlice[key];
+                        branch.slice.sliceType=slice.type.fr;                  
+                    }
+                }
+                else if(crvTypes[i]== "kink")
+                {
+                    branch.branchType = branch.type.kink;
+                }else if(crvTypes[i].StartsWith("open"))
+                {
+                    branch.branchType = branch.type.open;
+                    var key = crvTypes[i].Replace("open", "");
+                    branch.sliceKey = key;
+                    try
+                    {
+                        branch.slice = listSlice[key];
+                    }
+                    catch (KeyNotFoundException e)
+                    {
+                        listSlice[key] = new slice();
+                        branch.slice = listSlice[key];
+                        branch.slice.sliceType = slice.type.fx;
+                        var slider = myControlBox.addSlider(0, 1, 100, 40);
+                        slider.Converter = (val, sign) =>
+                        {
+                            var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
+                            var V = (branch.crv.Points[1].Location - branch.crv.Points[0].Location);
+                            var X = branch.crv.Points[branch.N - 1].Location; ;
+                            var Z = new Vector3d(0, 0, 1);
+                            var W = Vector3d.CrossProduct(Z, X - O);
+                            if (V * W < 0) W.Reverse();
+                            Z.Unitize();
+                            W.Unitize();
+                            var theta = val / 100d * Math.PI / 2d;
+                            branch.slice.norm = (Math.Cos(theta) / Math.Sin(theta)) * (Math.Cos(theta) / Math.Sin(theta));
+                            if (sign == true) theta = -theta;
+                            var Y = O + Z * Math.Cos(theta) + W * Math.Sin(theta);
+                            var plnew = new Plane(O, X, Y);
+                            branch.slice.update(plnew);
+                            this.ExpirePreview(true);
+                            return theta;
+                        };
+                    }
+                }else if(crvTypes[i]=="fix")
+                {
+                    branch.branchType = branch.type.fix;
+                }else{
                         AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "type should be either of reinforce, kink, fix, or open");
-                        return;
                 }
                 listBranch.Add(branch);
             }
-            myControlBox.clearSliders();
 
-            var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-            listSlice.Add(new slice(pl1));
-            int ss = 1;
+            //var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
+            //listSlice.Add(new slice());
+            //listSlice[0].update(pl1);
+            //int ss = 1;
 
-            foreach (var branch in listBranch)
+            /*foreach (var branch in listBranch)
             {
-                if (branch.branchType == branch.type.reinforce)
-                {
-                    //var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    //listSliceI.Add(new slice(plnew));
-                    branch.slice = listSlice[0];
-                    //ssI++;
-                }
+                //if (branch.branchType == branch.type.reinforce)
+                //{
+                //    branch.slice = listSlice[0];
+                //}
                 if (branch.branchType == branch.type.open)
                 {
                     var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    listSlice.Add(new slice(plnew));
+                    listSlice.Add(new slice());
+                    listSlice[ss].update(plnew);
                     branch.slice = listSlice[ss];
                     var slider = myControlBox.addSlider(0, 1, 100, 40);
-                    slider.Converter = (val) =>
+                    slider.Converter = (val,sign) =>
                     {
                         var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
                         var V = (branch.crv.Points[1].Location - branch.crv.Points[0].Location);
@@ -610,6 +659,7 @@ namespace mikity.ghComponents
                         Z.Unitize();
                         W.Unitize();
                         var theta = val / 100d * Math.PI / 2d;
+                        if (sign == true) theta = -theta;
                         var Y = O + Z * Math.Cos(theta) + W * Math.Sin(theta);
                         plnew = new Plane(O, X, Y);
                         branch.slice.update(plnew);
@@ -618,7 +668,7 @@ namespace mikity.ghComponents
                     };
                     ss++;
                 }
-            }
+            }*/
             // Connect nodes
             foreach (var node in listNode)
             {

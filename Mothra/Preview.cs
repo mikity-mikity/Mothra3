@@ -35,7 +35,7 @@ namespace mikity.ghComponents
             }
             if (listSlice != null)
             {
-                foreach (var slice in listSlice)
+                foreach (var slice in listSlice.Values)
                 {
                     var pl = slice.pl;
                     args.Display.DrawPolygon(new Rhino.Geometry.Point3d[] { pl.PointAt(-2, -2), pl.PointAt(-2, 2), pl.PointAt(2, 2), pl.PointAt(2, -2) }, System.Drawing.Color.Azure, true);

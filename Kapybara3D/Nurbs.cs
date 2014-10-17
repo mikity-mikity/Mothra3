@@ -299,14 +299,26 @@ namespace Minilla3D.Elements
             tup.va[0] = ax * tup.gi[0][0] + ay * tup.gi[0][1];
             tup.va[1] = ax * tup.gi[1][0] + ay * tup.gi[1][1];
             tup.valDc = 0;
-            for (int i = 0; i < 2; i++)
+            /*for (int i = 0; i < 2; i++)
             {
                 for (int j = 0; j < 2; j++)
                 {
                     tup.valDc += tup.va[i] * tup.Gij[i, j] * tup.dcdtstar[j];
                 }
+            }*/
+            tup.valDc += tup.va[0] * tup.gij[1, 1] * tup.dcdtstar[0];
+            tup.valDc += tup.va[1] * tup.gij[0, 0] * tup.dcdtstar[1];
+            tup.valDc -= tup.va[0] * tup.gij[1, 0] * tup.dcdtstar[1];
+            tup.valDc -= tup.va[1] * tup.gij[0, 1] * tup.dcdtstar[0];
+            if (tup.refDv < 0.0000001)
+            {
+                if (tup.gij[1, 1] > 0.0000001) tup.valDc /= Math.Sqrt(tup.gij[1, 1]);
+                if (tup.gij[0, 0] > 0.0000001) tup.valDc /= Math.Sqrt(tup.gij[0, 0]);
             }
-            tup.valDc *= tup.refDv;
+            else
+            {
+                tup.valDc /= tup.refDv;
+            }
             tup.valDc /= Math.Sqrt(gamma);
         }
         public void computeStressFunction(tuple tup)
@@ -659,7 +671,7 @@ namespace Minilla3D.Elements
             if (from[0, 0] <= 0)
             {
                 to[0, 0] = 0;
-                from[0, 0] = 0;
+                //from[0, 0] = 0;
             }
             else
             {
@@ -675,10 +687,10 @@ namespace Minilla3D.Elements
                 to[1, 0] = 0;
                 to[0, 1] = 0;
                 to[1, 1] = 0;
-                from[0, 0] = 0;
+/*                from[0, 0] = 0;
                 from[1, 0] = 0;
                 from[0, 1] = 0;
-                from[1, 1] = 0;
+                from[1, 1] = 0;*/
             }
             else
             {
@@ -703,7 +715,7 @@ namespace Minilla3D.Elements
                 to[2, 0] = 0;
                 to[2, 1] = 0;
                 to[2, 2] = 0;
-                from[0, 0] = 0;
+/*                from[0, 0] = 0;
                 from[0, 1] = 0;
                 from[0, 2] = 0;
                 from[1, 0] = 0;
@@ -712,7 +724,7 @@ namespace Minilla3D.Elements
                 from[1, 3] = 0;
                 from[2, 0] = 0;
                 from[2, 1] = 0;
-                from[2, 2] = 0;
+                from[2, 2] = 0;*/
             }
             else
             {
