@@ -114,7 +114,7 @@ namespace mikity.ghComponents
                 }
                 val2 *= target.refDv;
                 val2 /= Math.Sqrt(gamma);
-                task.putaij(numCon + t, branch.slice.varOffset, -val2);
+                task.putaij(numCon + t, branch.slice.varOffset, val2);
 
                 //b
                 for (int i = 0; i < 2; i++)
@@ -131,7 +131,7 @@ namespace mikity.ghComponents
                 }
                 val2 *= target.refDv;
                 val2 /= Math.Sqrt(gamma);
-                task.putaij(numCon + t, branch.slice.varOffset + 1, -val2);
+                task.putaij(numCon + t, branch.slice.varOffset + 1, val2);
             }
         }
         public void defineKinkAngle2(branch branch, leaf leaf1, leaf leaf2, mosek.Task task, int numCon, int numVar)
@@ -650,7 +650,7 @@ namespace mikity.ghComponents
                 }
             }
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,List<node> _listNode,Dictionary<string,slice> _listSlice,bool obj)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,Dictionary<string,slice> _listSlice,bool obj)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -662,37 +662,36 @@ namespace mikity.ghComponents
             {
                 leaf.varOffset = numvar;
                 leaf.conOffset = numcon;
-                numvar += (leaf.nU * leaf.nV) + leaf.r * 3;
+                numvar += (leaf.nU * leaf.nV) + leaf.r * 3;  //z,H11,H22,H12
                 numcon += leaf.r * 3 ;// H11,H22,H12
             }
             foreach (var branch in _listBranch)
             {
                 branch.varOffset = numvar;
                 branch.conOffset = numcon;
-                numvar += branch.N + branch.tuples.Count(); //added kink angle variables. can be set inequality constraints.
+                numvar += branch.N + branch.tuples.Count(); //z,D
                 if (branch.branchType == branch.type.kink)
                 {
-                    numcon += 2 * branch.N;
+                    numcon += 2 * branch.N;//branch->left and right sides
                 }
                 else if (branch.branchType == branch.type.reinforce||branch.branchType==branch.type.open)
                 {
-                    //numvar++;               //z height variable
-                    numcon += 1 * branch.N; //branch->z height
-                    numcon += 1 * branch.N; //branch->edge 
+                    numcon += 1 * branch.N; //z=-ax-by-d
+                    numcon += 1 * branch.N; //branch->edge(target) 
                 }
-                else
+                else//free
                 {
-                    numcon += 1 * branch.N; //branch->edge 
+                    numcon += 1 * branch.N; //branch->edge(target)
                 }
-                numcon += branch.tuples.Count();// kink angle definitions.
+                numcon += branch.tuples.Count();// D(kink angle)
             }
-            foreach (var node in _listNode)
+            /*foreach (var node in _listNode)
             {
                 node.varOffset = numvar;
                 node.conOffset = numcon;
                 numvar++;  //always 1
                 numcon += node.N;  //usually 3
-            }
+            }*/
             foreach (var slice in _listSlice.Values)
             {
                 slice.varOffset = numvar;
@@ -717,7 +716,7 @@ namespace mikity.ghComponents
                     bux[i + leaf.varOffset] = infinity;
                 }
                 //H11,H22,H12
-                if (leaf.leafType == leaf.type.convex)
+                //if (leaf.leafType == leaf.type.convex)
                 {
                     for (int i = 0; i < leaf.r; i++)
                     {
@@ -733,7 +732,7 @@ namespace mikity.ghComponents
                         bux[n + 2 + leaf.varOffset] = infinity;
                     }
                 }
-                else
+                /*else
                 {
                     double S = 0.001;
                     for (int i = 0; i < leaf.r; i++)
@@ -749,32 +748,30 @@ namespace mikity.ghComponents
                         blx[n + 2 + leaf.varOffset] = -S;
                         bux[n + 2 + leaf.varOffset] = S;
                     }
-                }
+                }*/
             }
             foreach(var branch in _listBranch)
             {
                 if (branch.branchType == branch.type.reinforce )
                 {
-                    //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
                     for (int i = 0; i < branch.N; i++)
                     {
                         {
-                            bkx[i + branch.varOffset] = mosek.boundkey.fr;
-                            blx[i + branch.varOffset] = -infinity;
-                            bux[i + branch.varOffset] = infinity;
+                            bkx[i + branch.varOffset] = mosek.boundkey.fx;
+                            blx[i + branch.varOffset] = 10d;// -infinity;
+                            bux[i + branch.varOffset] = 10d;// infinity;
                         }
                     }
                     //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fr;//may be lo
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.lo;//may be lo
                         blx[branch.N + i + branch.varOffset] = 0;
                         bux[branch.N + i + branch.varOffset] = 0;
                     }
                 }
                 else if (branch.branchType == branch.type.open)
                 {
-                    //plane is Ax+By+Cz+D=0, the norm of [A,B,C] is always 1
                     for (int i = 0; i < branch.N; i++)
                     {
                         bkx[i + branch.varOffset] = mosek.boundkey.fr;
@@ -784,7 +781,7 @@ namespace mikity.ghComponents
                     //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
-                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fr;
+                        bkx[branch.N + i + branch.varOffset] = mosek.boundkey.fx;
                         blx[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc;
                         bux[branch.N + i + branch.varOffset] = 0;// branch.tuples[i].target.valDc;
                     }
@@ -797,6 +794,7 @@ namespace mikity.ghComponents
                         blx[i + branch.varOffset] = -infinity;
                         bux[i + branch.varOffset] = infinity;
                     }
+                    //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
                         if (obj)
@@ -814,7 +812,7 @@ namespace mikity.ghComponents
 
                     }
                 }
-                else
+                else//free
                 {
                     for (int i = 0; i < branch.N; i++)
                     {
@@ -822,6 +820,12 @@ namespace mikity.ghComponents
                         blx[i + branch.varOffset] = -infinity;
                         bux[i + branch.varOffset] = infinity;
                     }
+                    bkx[branch.varOffset] = mosek.boundkey.fx;
+                    blx[branch.varOffset] = -2;
+                    bux[branch.varOffset] = -2;
+                    bkx[branch.varOffset+branch.N-1] = mosek.boundkey.fx;
+                    blx[branch.varOffset + branch.N-1] = -2;
+                    bux[branch.varOffset + branch.N-1] = -2;
                     //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
@@ -831,12 +835,26 @@ namespace mikity.ghComponents
                     }
                 }
             }
+            /*
             foreach(var node in _listNode)
             {
-                bkx[node.varOffset]=mosek.boundkey.fr;
-                blx[node.varOffset] = -infinity;
-                bux[node.varOffset] = infinity;
+                bkx[node.varOffset]=mosek.boundkey.fx;
+                blx[node.varOffset] = -2;
+                bux[node.varOffset] = -2;
+            }*/
+            foreach (var slice in _listSlice.Values)
+            {
+                bkx[slice.varOffset] = mosek.boundkey.fr;
+                blx[slice.varOffset] = -infinity;
+                bux[slice.varOffset] = infinity;
+                bkx[slice.varOffset+1] = mosek.boundkey.fr;
+                blx[slice.varOffset+1] = -infinity;
+                bux[slice.varOffset+1] = infinity;
+                bkx[slice.varOffset+2] = mosek.boundkey.fr;
+                blx[slice.varOffset+2] = -infinity;
+                bux[slice.varOffset+2] = infinity;
             }
+
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
             {
@@ -980,7 +998,6 @@ namespace mikity.ghComponents
                                 double x = branch.crv.Points[i].Location.X;
                                 double y = branch.crv.Points[i].Location.Y;
                                 task.putconbound(branch.conOffset + branch.N + branch.tuples.Count() + i, mosek.boundkey.fx, 0, 0);
-                                //task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + branch.N + branch.tuples.Count(), -1);
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, branch.varOffset + i, 1);//z
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, iA, x);//ax
                                 task.putaij(branch.conOffset + branch.N + branch.tuples.Count() + i, iB, y);//by
@@ -995,15 +1012,15 @@ namespace mikity.ghComponents
                             defineKinkAngle(branch,branch.target, task, branch.conOffset + branch.N, branch.varOffset + branch.N);
                         }
                     }
-                    foreach (var node in _listNode)
+                    /*foreach (var node in _listNode)
                     {
                         for (int i = 0; i < node.N; i++)
                         {
                             task.putconbound(node.conOffset + i, mosek.boundkey.fx, 0, 0);
                             task.putaij(node.conOffset + i, node.varOffset, -1);
-                            task.putaij(node.conOffset + i, node.share[i].varOffset+node.number[i], 1);
+                            task.putaij(node.conOffset + i, node.share[i].varOffset + node.number[i], 1);
                         }
-                    }
+                    }*/
                     /*foreach (var slice in _listSlice.Values)
                     {
                         if (slice.sliceType == slice.type.fx)
