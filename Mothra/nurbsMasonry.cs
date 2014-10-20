@@ -111,6 +111,10 @@ namespace mikity.ghComponents
             public void update(Plane _pl)
             {
                 pl=_pl;
+                var vars = _pl.GetPlaneEquation();
+                a = vars[0] / vars[2];
+                b = vars[1] / vars[2];
+                d = vars[3] / vars[2];
             }
         }
         public class branch
@@ -600,19 +604,18 @@ namespace mikity.ghComponents
                         listSlice[key] = new slice();
                         branch.slice = listSlice[key];
                         branch.slice.sliceType = slice.type.fx;
-                        var slider = myControlBox.addSlider(0, 1, 100, 40);
+                        var slider = myControlBox.addSlider(0, 1, 100, 40, (flag) => { if (flag) { branch.slice.sliceType = slice.type.fx; } else { branch.slice.sliceType = slice.type.fr; } });
                         slider.Converter = (val, sign) =>
                         {
                             var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
                             var V = (branch.crv.Points[1].Location - branch.crv.Points[0].Location);
-                            var X = branch.crv.Points[branch.N - 1].Location; ;
+                            var X = branch.crv.Points[branch.N - 1].Location;
                             var Z = new Vector3d(0, 0, 1);
                             var W = Vector3d.CrossProduct(Z, X - O);
                             if (V * W < 0) W.Reverse();
                             Z.Unitize();
                             W.Unitize();
                             var theta = val / 100d * Math.PI / 2d;
-                            branch.slice.norm = (Math.Cos(theta) / Math.Sin(theta)) * (Math.Cos(theta) / Math.Sin(theta));
                             if (sign == true) theta = -theta;
                             var Y = O + Z * Math.Cos(theta) + W * Math.Sin(theta);
                             var plnew = new Plane(O, X, Y);

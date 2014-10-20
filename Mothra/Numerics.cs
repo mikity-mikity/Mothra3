@@ -697,10 +697,6 @@ namespace mikity.ghComponents
                 slice.varOffset = numvar;
                 slice.conOffset = numcon;
                 numvar += 3;  //a,b,d
-                if (slice.sliceType == slice.type.fx)
-                {
-                    numcon++;  //x^2+b^2=norm
-                }
             }
             //variable settings
             mosek.boundkey[] bkx = new mosek.boundkey[numvar];
@@ -757,9 +753,9 @@ namespace mikity.ghComponents
                     for (int i = 0; i < branch.N; i++)
                     {
                         {
-                            bkx[i + branch.varOffset] = mosek.boundkey.fx;
-                            blx[i + branch.varOffset] = 10d;// -infinity;
-                            bux[i + branch.varOffset] = 10d;// infinity;
+                            bkx[i + branch.varOffset] = mosek.boundkey.fr;
+                            blx[i + branch.varOffset] = 0;// 10d;// -infinity;
+                            bux[i + branch.varOffset] = 0;// 10d;// infinity;
                         }
                     }
                     //kink angle parameter
@@ -777,6 +773,15 @@ namespace mikity.ghComponents
                         bkx[i + branch.varOffset] = mosek.boundkey.fr;
                         blx[i + branch.varOffset] = 0;
                         bux[i + branch.varOffset] = 0;
+                    }
+                    if (branch.slice.sliceType == slice.type.fr)
+                    {
+                        bkx[branch.varOffset] = mosek.boundkey.fx;
+                        blx[branch.varOffset] = -2;
+                        bux[branch.varOffset] = -2;
+                        bkx[branch.varOffset+branch.N-1] = mosek.boundkey.fx;
+                        blx[branch.varOffset + branch.N-1] = -2;
+                        bux[branch.varOffset + branch.N-1] = -2;
                     }
                     //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
@@ -820,12 +825,6 @@ namespace mikity.ghComponents
                         blx[i + branch.varOffset] = -infinity;
                         bux[i + branch.varOffset] = infinity;
                     }
-                    bkx[branch.varOffset] = mosek.boundkey.fx;
-                    blx[branch.varOffset] = -2;
-                    bux[branch.varOffset] = -2;
-                    bkx[branch.varOffset+branch.N-1] = mosek.boundkey.fx;
-                    blx[branch.varOffset + branch.N-1] = -2;
-                    bux[branch.varOffset + branch.N-1] = -2;
                     //kink angle parameter
                     for (int i = 0; i < branch.tuples.Count(); i++)
                     {
@@ -844,15 +843,40 @@ namespace mikity.ghComponents
             }*/
             foreach (var slice in _listSlice.Values)
             {
-                bkx[slice.varOffset] = mosek.boundkey.fr;
-                blx[slice.varOffset] = -infinity;
-                bux[slice.varOffset] = infinity;
-                bkx[slice.varOffset+1] = mosek.boundkey.fr;
-                blx[slice.varOffset+1] = -infinity;
-                bux[slice.varOffset+1] = infinity;
-                bkx[slice.varOffset+2] = mosek.boundkey.fr;
-                blx[slice.varOffset+2] = -infinity;
-                bux[slice.varOffset+2] = infinity;
+                if (slice.sliceType == slice.type.fx)
+                {
+                    //add something!
+                    /*bkx[slice.varOffset] = mosek.boundkey.fr;
+                    blx[slice.varOffset] = -infinity;
+                    bux[slice.varOffset] = infinity;
+                    bkx[slice.varOffset + 1] = mosek.boundkey.fr;
+                    blx[slice.varOffset + 1] = -infinity;
+                    bux[slice.varOffset + 1] = infinity;
+                    bkx[slice.varOffset + 2] = mosek.boundkey.fr;
+                    blx[slice.varOffset + 2] = -infinity;
+                    bux[slice.varOffset + 2] = infinity;*/
+                    bkx[slice.varOffset] = mosek.boundkey.fx;
+                    blx[slice.varOffset] = slice.a;
+                    bux[slice.varOffset] = slice.a;
+                    bkx[slice.varOffset + 1] = mosek.boundkey.fx;
+                    blx[slice.varOffset + 1] = slice.b;
+                    bux[slice.varOffset + 1] = slice.b;
+                    bkx[slice.varOffset + 2] = mosek.boundkey.fx;
+                    blx[slice.varOffset + 2] = slice.d;
+                    bux[slice.varOffset + 2] = slice.d;
+                }
+                else
+                {
+                    bkx[slice.varOffset] = mosek.boundkey.fr;
+                    blx[slice.varOffset] = -infinity;
+                    bux[slice.varOffset] = infinity;
+                    bkx[slice.varOffset + 1] = mosek.boundkey.fr;
+                    blx[slice.varOffset + 1] = -infinity;
+                    bux[slice.varOffset + 1] = infinity;
+                    bkx[slice.varOffset + 2] = mosek.boundkey.fr;
+                    blx[slice.varOffset + 2] = -infinity;
+                    bux[slice.varOffset + 2] = infinity;
+                }
             }
 
             // Make mosek environment.
@@ -1026,7 +1050,7 @@ namespace mikity.ghComponents
                         if (slice.sliceType == slice.type.fx)
                         {
                             //append a quadratic constraints
-                            task.putconbound(slice.conOffset, mosek.boundkey.fx, slice.norm, slice.norm);
+                            task.putconbound(slice.conOffset, mosek.boundkey.fx, 4d, 4d);
                             int[] qsubi = { slice.varOffset, slice.varOffset + 1 };//a,b
                             int[] qsubj = { slice.varOffset, slice.varOffset + 1 };//a,b
                             double[] qval = { 1d, 1d};

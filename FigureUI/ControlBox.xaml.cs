@@ -61,18 +61,21 @@ namespace Mothra.UI
             b.Text = name;
             return b;
         }
-        public Mothra.UI.slider addSlider(int min, int step, int max,int val)
+        public Mothra.UI.slider addSlider(int min, int step, int max, int val, Action<bool> fixChanged)
         {
-            Mothra.UI.slider s = addSlider(min, step, max, val, "");
+            Mothra.UI.slider s = addSlider(min, step, max, val, "", fixChanged);
             return s;
         }
-        public Mothra.UI.slider addSlider(int min, int step, int max, int val, string text)
+        public Mothra.UI.slider addSlider(int min, int step, int max, int val, string text,Action<bool> fixChanged)
         {
             Mothra.UI.slider s = new Mothra.UI.slider(min, step, max, val, text);
             this.stackPanel1.Children.Add(s);
             s.getSlider.ValueChanged +=new RoutedPropertyChangedEventHandler<double>(this.slider_ValueChanged);
-            s.getCheckBox.Checked += new RoutedEventHandler(this.slider_Checked);
-            s.getCheckBox.Unchecked += new RoutedEventHandler(this.slider_Checked);
+            s.getCheckBoxInverted.Checked += new RoutedEventHandler(this.slider_Checked);
+            s.getCheckBoxInverted.Unchecked += new RoutedEventHandler(this.slider_Checked);
+            s.getCheckBoxFix.Checked += new RoutedEventHandler(this.slider_Checked);
+            s.getCheckBoxFix.Unchecked += new RoutedEventHandler(this.slider_Checked);
+            s.fixChanged = fixChanged;
             listSlider.Add(s);
             return s;
         }
@@ -87,6 +90,7 @@ namespace Mothra.UI
             foreach (var s in listSlider)
             {
                 s.update();
+                s.fixChanged((bool)s.getCheckBoxFix.IsChecked);
             }
         }
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

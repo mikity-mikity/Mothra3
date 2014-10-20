@@ -24,9 +24,13 @@ namespace Mothra.UI
         {
             get { return this.slider1; }
         }
-        public System.Windows.Controls.CheckBox getCheckBox
+        public System.Windows.Controls.CheckBox getCheckBoxInverted
         {
             get { return this.invert; }
+        }
+        public System.Windows.Controls.CheckBox getCheckBoxFix
+        {
+            get { return this.fix; }
         }
         public System.Windows.Controls.Label getLabel
         {
@@ -77,6 +81,7 @@ namespace Mothra.UI
                 this.label1.Content = this.text + ":  " + this.value.ToString("0.000");
             }
         }
+        public Action<bool> fixChanged;
         public Func<double, bool,double> Converter
         {
             set
@@ -85,6 +90,8 @@ namespace Mothra.UI
                 update();
             }
         }
+
+
     }
 }
 
