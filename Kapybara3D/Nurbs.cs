@@ -47,6 +47,7 @@ namespace Minilla3D.Elements
             public double[] va;
             public double dv, refDv;
             public double[][] eigenVectors;
+            public double[][] eigenVectorsB;
             public double[] eigenValues;
             public double valD;
             public double valDc;
@@ -137,6 +138,10 @@ namespace Minilla3D.Elements
                         this.eigenVectors[1][k] += P12 * this.Gi[0][k];
                         this.eigenVectors[1][k] += P22 * this.Gi[1][k];
                     }
+                    this.eigenVectorsB[0][0] = P11;
+                    this.eigenVectorsB[0][1] = P21;
+                    this.eigenVectorsB[1][0] = P12;
+                    this.eigenVectorsB[1][1] = P22;
                 }
             }
 
@@ -193,6 +198,7 @@ namespace Minilla3D.Elements
                 H = new double[2, 2];
                 SPK = new double[2, 2];
                 eigenVectors = new double[2][] { new double[3], new double[3] };
+                eigenVectorsB = new double[2][] { new double[2], new double[2] };
                 eigenValues = new double[2];
                 s = new double[2] { 0, 0 };
                 va = new double[2] { 0, 0 };
