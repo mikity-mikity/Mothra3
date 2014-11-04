@@ -68,7 +68,7 @@ namespace mikity.ghComponents
                                 circle.Transform(zDown);
                                 Guid id = doc.Objects.AddCircle(circle, a6);
                                 obj_ids.Add(id);
-                                circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), 0.5);
+                                circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, branch.slice2.height), 0.5);
                                 circle.Transform(zDown_eq);
                                 id = doc.Objects.AddCircle(circle, a6);
                                 obj_ids.Add(id);

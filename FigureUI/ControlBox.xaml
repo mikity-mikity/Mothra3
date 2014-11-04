@@ -28,8 +28,11 @@
                 <RadioButton x:Name="Radio5e" Checked="Radio5e_Checked" GroupName="force">0.1</RadioButton>
             </WrapPanel>
             <CheckBox x:Name="obj">objective function?</CheckBox>
+            <StackPanel Height="Auto" Name="stackPanel1" Width="400" HorizontalAlignment="Stretch">
+            </StackPanel>
+            <StackPanel Height="Auto" Name="stackPanel2" Width="400" HorizontalAlignment="Stretch">
+            </StackPanel>
         </StackPanel>
-        <StackPanel Height="Auto" Name="stackPanel1" Width="400" HorizontalAlignment="Stretch"></StackPanel>
 
     </DockPanel>
 </Window>

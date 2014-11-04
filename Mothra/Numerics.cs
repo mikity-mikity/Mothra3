@@ -424,8 +424,8 @@ namespace mikity.ghComponents
                         blx[i * 3 + 1 + branch.varOffset] = branch.crv.Points[i].Location.Y;
                         bux[i * 3 + 1 + branch.varOffset] = branch.crv.Points[i].Location.Y;
                         bkx[i * 3 + 2 + branch.varOffset] = mosek.boundkey.fx;
-                        blx[i * 3 + 2 + branch.varOffset] = 0;
-                        bux[i * 3 + 2 + branch.varOffset] = 0;
+                        blx[i * 3 + 2 + branch.varOffset] = branch.slice2.height;
+                        bux[i * 3 + 2 + branch.varOffset] = branch.slice2.height;
                     }
                     else
                     {

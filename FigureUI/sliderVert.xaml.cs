@@ -18,26 +18,18 @@ namespace Mothra.UI
     /// <summary>
     /// variable.xaml の相互作用ロジック
     /// </summary>
-    public partial class slider : UserControl
+    public partial class sliderVert : UserControl
     {
         public System.Windows.Controls.Slider getSlider
         {
             get { return this.slider1; }
-        }
-        public System.Windows.Controls.CheckBox getCheckBoxInverted
-        {
-            get { return this.invert; }
-        }
-        public System.Windows.Controls.CheckBox getCheckBoxFix
-        {
-            get { return this.fix; }
         }
         public System.Windows.Controls.Label getLabel
         {
             get { return this.label1; }
         }
         public string text;
-        private Func<double, bool,double> _convert;
+        private Func<double, double> _convert;
         public int originalValue
         {
             get
@@ -49,14 +41,14 @@ namespace Mothra.UI
         {
             get
             {
-                return _convert(this.slider1.Value,(bool)invert.IsChecked);
+                return _convert(this.slider1.Value);
             }
         }
-        public slider()
+        public sliderVert()
         {
             InitializeComponent();
         }
-        public slider(int min, int step, int max, int val, string _text)
+        public sliderVert(int min, int step, int max, int val, string _text)
         {
             InitializeComponent();
             this.slider1.Minimum = min;
@@ -66,7 +58,7 @@ namespace Mothra.UI
             {
                 this.slider1.Ticks.Add(i);
             }
-            _convert = (v, sign) => { if (sign)return -v; return v; };
+            _convert = (v) => { return v; };
             this.text = _text;
             this.update();
         }
@@ -82,7 +74,7 @@ namespace Mothra.UI
             }
         }
         public Action<bool> fixChanged;
-        public Func<double, bool,double> Converter
+        public Func<double, double> Converter
         {
             set
             {

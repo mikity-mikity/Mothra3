@@ -93,6 +93,10 @@ namespace mikity.ghComponents
                 number.Clear();
             }
         }
+        public class slice2
+        {
+            public double height;
+        }
         public class slice
         {
             public Plane pl;
@@ -137,6 +141,7 @@ namespace mikity.ghComponents
             public Interval dom;
             public dl_ex[] tuples;
             public slice slice;
+            public slice2 slice2;
             public string sliceKey;
             public enum type
             {
@@ -253,6 +258,7 @@ namespace mikity.ghComponents
         List<Line> crossCyan;
         List<Line> crossMagenta;
         Dictionary<string, slice> listSlice;
+        Dictionary<string, slice2> listSlice2;
         List<NurbsCurve> listError;
         private void init()
         {
@@ -556,7 +562,8 @@ namespace mikity.ghComponents
             if (_listSrf.Count != srfTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for surfaces"); return; }
             if (_listCrv.Count != crvTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
             //listSlice = new List<slice>();
-            listSlice=new Dictionary<string,slice>();
+            listSlice = new Dictionary<string, slice>();
+            listSlice2 = new Dictionary<string, slice2>();
             listLeaf = new List<leaf>();
             listBranch = new List<branch>();
             listNode=new List<node>();
@@ -604,7 +611,7 @@ namespace mikity.ghComponents
                         listSlice[key] = new slice();
                         branch.slice = listSlice[key];
                         branch.slice.sliceType = slice.type.fx;
-                        var slider = myControlBox.addSlider(0, 1, 100, 40, (flag) => { if (flag) { branch.slice.sliceType = slice.type.fx; } else { branch.slice.sliceType = slice.type.fr; } });
+                        var slider = myControlBox.addSliderRot(0, 1, 100, 40, (flag) => { if (flag) { branch.slice.sliceType = slice.type.fx; } else { branch.slice.sliceType = slice.type.fr; } });
                         slider.Converter = (val, sign) =>
                         {
                             var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
@@ -624,9 +631,29 @@ namespace mikity.ghComponents
                             return theta;
                         };
                     }
-                }else if(crvTypes[i]=="fix")
+                }else if(crvTypes[i].StartsWith("fix"))
                 {
                     branch.branchType = branch.type.fix;
+                    var key = crvTypes[i].Replace("fix", "");
+                    branch.sliceKey = key;
+                    try
+                    {
+                        branch.slice2 = listSlice2[key];
+                    }
+                    catch (KeyNotFoundException e)
+                    {
+                        listSlice2[key] = new slice2();
+                        branch.slice2 = listSlice2[key];
+
+                        var slider = myControlBox.addSliderVert(0, 1, 200, 50);
+                        slider.Converter = (val) =>
+                            {
+                                double height = val / 10d - 10d;
+                                branch.slice2.height = height;
+                                this.ExpirePreview(true);
+                                return height;
+                            };
+                    }
                 }else{
                         AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "type should be either of reinforce, kink, fix, or open");
                 }

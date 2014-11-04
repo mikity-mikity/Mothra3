@@ -82,6 +82,25 @@ namespace mikity.ghComponents
             }
             foreach (var branch in listBranch)
             {
+                if (branch.branchType == branch.type.fix)
+                {
+                    double x = 0, y = 0, z = branch.slice2.height;
+                    for (int i = 0; i < branch.N; i++)
+                    {
+                        x += branch.crv.Points[i].Location.X;
+                        y += branch.crv.Points[i].Location.Y;
+                        z += branch.crv.Points[i].Location.Z;
+                    }
+                    x /= branch.N;
+                    y /= branch.N;
+                    args.Display.DrawLine(new Rhino.Geometry.Point3d(x - 1d, y - 1d, z), new Rhino.Geometry.Point3d(x + 1d, y - 1d, z), System.Drawing.Color.Blue);
+                    args.Display.DrawLine(new Rhino.Geometry.Point3d(x - 1d, y - 1d, z), new Rhino.Geometry.Point3d(x - 1d, y + 1d, z), System.Drawing.Color.Blue);
+                    args.Display.DrawLine(new Rhino.Geometry.Point3d(x + 1d, y + 1d, z), new Rhino.Geometry.Point3d(x + 1d, y - 1d, z), System.Drawing.Color.Blue);
+                    args.Display.DrawLine(new Rhino.Geometry.Point3d(x + 1d, y + 1d, z), new Rhino.Geometry.Point3d(x - 1d, y + 1d, z), System.Drawing.Color.Blue);
+                }
+            }
+            foreach (var branch in listBranch)
+            {
                 if (branch.shellCrv != null)
                 {
                     var crv = branch.shellCrv.Duplicate() as Rhino.Geometry.NurbsCurve;
@@ -101,6 +120,9 @@ namespace mikity.ghComponents
                             foreach (var tup in branch.tuples)
                             {
                                 var circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, tup.z), 0.5);
+                                circle.Transform(zDown);
+                                args.Display.DrawCircle(circle, System.Drawing.Color.Yellow, 2);
+                                circle = new Rhino.Geometry.Circle(new Rhino.Geometry.Point3d(tup.x, tup.y, branch.slice2.height), 0.5);
                                 circle.Transform(zDown);
                                 args.Display.DrawCircle(circle, System.Drawing.Color.Yellow, 2);
                             }
