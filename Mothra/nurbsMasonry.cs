@@ -73,6 +73,7 @@ namespace mikity.ghComponents
         public class node
         {
             public double x,y,z;
+            public double airyHeight;
             public int N;
             public List<branch> share=new List<branch>();
             public List<int> number = new List<int>();
@@ -86,11 +87,18 @@ namespace mikity.ghComponents
                 if ((dx * dx + dy * dy + dz * dz) < 0.0000001) return true;
                 return false;
             }
+            public enum type
+            {
+                fr, fx
+            }
+            public type nodeType;
+
             public node()
             {
                 N = 0;
                 share.Clear();
                 number.Clear();
+                nodeType = type.fr;
             }
         }
         public class slice2
@@ -281,8 +289,10 @@ namespace mikity.ghComponents
         {
             pManager.AddSurfaceParameter("listSurface", "lstSrf", "list of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddCurveParameter("listCurve", "lstCrv", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddPointParameter("listPoint", "lstPnt", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddTextParameter("listType", "lstSrfType", "list of types of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddTextParameter("listType", "lstCrvType", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
+            pManager.AddTextParameter("listHeight", "lstPntHeight", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
         }
         protected override void RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager pManager)
         {
@@ -496,7 +506,7 @@ namespace mikity.ghComponents
                 }
             }
             //call mosek
-            mosek1(listLeaf, listBranch, listSlice, myControlBox.objective);
+            mosek1(listLeaf, listBranch, listSlice,listNode, myControlBox.objective);
             hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
             ready = true;
             this.ExpirePreview(true);
@@ -552,16 +562,21 @@ namespace mikity.ghComponents
             init();
             _listSrf = new List<Surface>();
             _listCrv = new List<Curve>();
+            var _listPnt = new List<Point3d>();
             List<string> srfTypes = new List<string>();
             List<string> crvTypes = new List<string>();
+            List<string> pntHeights = new List<string>();
             if (!DA.GetDataList(0, _listSrf)) { return; }
             if (!DA.GetDataList(1, _listCrv)) { return; }
-            if (!DA.GetDataList(2, srfTypes)) { return; }
-            if (!DA.GetDataList(3, crvTypes)) { return; }
+            if (!DA.GetDataList(2, _listPnt)) { return; }
+            if (!DA.GetDataList(3, srfTypes)) { return; }
+            if (!DA.GetDataList(4, crvTypes)) { return; }
+            if (!DA.GetDataList(5, pntHeights)) { return; }
 
             if (_listSrf.Count != srfTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for surfaces"); return; }
             if (_listCrv.Count != crvTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
-            //listSlice = new List<slice>();
+            if (_listPnt.Count != pntHeights.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need heights for points"); return; }
+
             listSlice = new Dictionary<string, slice>();
             listSlice2 = new Dictionary<string, slice2>();
             listLeaf = new List<leaf>();
@@ -645,7 +660,7 @@ namespace mikity.ghComponents
                         listSlice2[key] = new slice2();
                         branch.slice2 = listSlice2[key];
 
-                        var slider = myControlBox.addSliderVert(0, 1, 200, 50);
+                        var slider = myControlBox.addSliderVert(0, 1, 200, 100);
                         slider.Converter = (val) =>
                             {
                                 double height = val / 10d - 10d;
@@ -660,45 +675,6 @@ namespace mikity.ghComponents
                 listBranch.Add(branch);
             }
 
-            //var pl1 = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-            //listSlice.Add(new slice());
-            //listSlice[0].update(pl1);
-            //int ss = 1;
-
-            /*foreach (var branch in listBranch)
-            {
-                //if (branch.branchType == branch.type.reinforce)
-                //{
-                //    branch.slice = listSlice[0];
-                //}
-                if (branch.branchType == branch.type.open)
-                {
-                    var plnew = new Plane(new Point3d(0, 0, 0), new Vector3d(0, 0, 1));
-                    listSlice.Add(new slice());
-                    listSlice[ss].update(plnew);
-                    branch.slice = listSlice[ss];
-                    var slider = myControlBox.addSlider(0, 1, 100, 40);
-                    slider.Converter = (val,sign) =>
-                    {
-                        var O = (branch.crv.Points[0].Location + branch.crv.Points[branch.N - 1].Location) / 2;
-                        var V = (branch.crv.Points[1].Location - branch.crv.Points[0].Location);
-                        var X = branch.crv.Points[branch.N - 1].Location; ;
-                        var Z = new Vector3d(0, 0, 1);
-                        var W = Vector3d.CrossProduct(Z, X - O);
-                        if (V * W < 0) W.Reverse();
-                        Z.Unitize();
-                        W.Unitize();
-                        var theta = val / 100d * Math.PI / 2d;
-                        if (sign == true) theta = -theta;
-                        var Y = O + Z * Math.Cos(theta) + W * Math.Sin(theta);
-                        plnew = new Plane(O, X, Y);
-                        branch.slice.update(plnew);
-                        this.ExpirePreview(true);
-                        return theta;
-                    };
-                    ss++;
-                }
-            }*/
             // Connect nodes
             foreach (var node in listNode)
             {
@@ -755,6 +731,19 @@ namespace mikity.ghComponents
                     newNode.x = Q.X;
                     newNode.y = Q.Y;
                     newNode.z = Q.Z;
+                }
+            }
+            foreach (var P in _listPnt)
+            {
+                foreach (var node in listNode)
+                {
+                    if(node.compare(P))
+                    {
+                        node.nodeType = node.type.fx;
+                        var text = pntHeights[_listPnt.IndexOf(P)];
+                        double height=double.Parse(text);
+                        node.airyHeight = height;
+                    }
                 }
             }
             for(int i=0;i<_listSrf.Count;i++)
