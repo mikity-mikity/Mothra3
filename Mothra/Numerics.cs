@@ -652,7 +652,7 @@ namespace mikity.ghComponents
                 }
             }
         }
-        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,Dictionary<string,slice> _listSlice,List<node> _listNode, bool obj)
+        public void mosek1(List<leaf> _listLeaf,List<branch> _listBranch,Dictionary<string,slice> _listSlice,/*List<node> _listNode,*/ bool obj)
         {
             // Since the value infinity is never used, we define
             // 'infinity' symbolic purposes only
@@ -705,14 +705,13 @@ namespace mikity.ghComponents
                     numcon++;
                 }
             }
-            foreach (var node in _listNode)
+            /*foreach (var node in _listNode)
             {
                 node.varOffset = numvar;
                 node.conOffset = numcon;
                 numvar ++;  //always 3
                 numcon += node.N;  //usually 3
-            }
-
+            }*/
             //variable settings
             mosek.boundkey[] bkx = new mosek.boundkey[numvar];
             double[] blx = new double[numvar];
@@ -867,7 +866,7 @@ namespace mikity.ghComponents
                 if (slice.sliceType == slice.type.fx)
                 {
                     //add something!
-                    /*bkx[slice.varOffset] = mosek.boundkey.fx;
+                    bkx[slice.varOffset] = mosek.boundkey.fx;
                     blx[slice.varOffset] = slice.a;
                     bux[slice.varOffset] = slice.a;
                     bkx[slice.varOffset + 1] = mosek.boundkey.fx;
@@ -875,8 +874,8 @@ namespace mikity.ghComponents
                     bux[slice.varOffset + 1] = slice.b;
                     bkx[slice.varOffset + 2] = mosek.boundkey.fx;
                     blx[slice.varOffset + 2] = slice.d;
-                    bux[slice.varOffset + 2] = slice.d;*/
-                    bkx[slice.varOffset] = mosek.boundkey.fr;
+                    bux[slice.varOffset + 2] = slice.d;
+                    /*bkx[slice.varOffset] = mosek.boundkey.fr;
                     blx[slice.varOffset] = -infinity;
                     bux[slice.varOffset] = infinity;
                     bkx[slice.varOffset + 1] = mosek.boundkey.fr;
@@ -884,7 +883,7 @@ namespace mikity.ghComponents
                     bux[slice.varOffset + 1] = infinity;
                     bkx[slice.varOffset + 2] = mosek.boundkey.fr;
                     blx[slice.varOffset + 2] = -infinity;
-                    bux[slice.varOffset + 2] = infinity;
+                    bux[slice.varOffset + 2] = infinity;*/
                 }
                 else
                 {
@@ -899,7 +898,7 @@ namespace mikity.ghComponents
                     bux[slice.varOffset + 2] = infinity;
                 }
             }
-            foreach (var node in _listNode)
+            /*foreach (var node in _listNode)
             {
                 if (node.nodeType == node.type.fr)
                 {
@@ -913,7 +912,7 @@ namespace mikity.ghComponents
                     blx[node.varOffset] = node.airyHeight;
                     bux[node.varOffset] = node.airyHeight;
                 }
-            }
+            }*/
 
             // Make mosek environment.
             using (mosek.Env env = new mosek.Env())
@@ -1077,16 +1076,16 @@ namespace mikity.ghComponents
                             defineKinkAngle(branch,branch.target, task, branch.conOffset + branch.N, branch.varOffset + branch.N);
                         }
                     }
-                    foreach (var slice in _listSlice.Values)
+                    /*foreach (var slice in _listSlice.Values)
                     {
                         if (slice.sliceType == slice.type.fx)
                         {
                             //double var = slice.a * slice.a + slice.b * slice.b;
-                            task.putconbound(slice.conOffset, mosek.boundkey.fx, 1d/*var*/, 1d/*var*/);
+                            task.putconbound(slice.conOffset, mosek.boundkey.fx, 1d, 1d);
                             task.putqconk(slice.conOffset, new int[2] { slice.varOffset, slice.varOffset + 1 }, new int[2] { slice.varOffset, slice.varOffset + 1 }, new double[2] { 1, 1 });
                         }
-                    }
-                    foreach (var node in _listNode)
+                    }*/
+                    /*foreach (var node in _listNode)
                     {
                         for (int i = 0; i < node.N; i++)
                         {
@@ -1095,8 +1094,9 @@ namespace mikity.ghComponents
                             task.putaij(node.conOffset + i, node.share[i].varOffset + (node.number[i]), 1);
                         }
                     }
-
+                    */
                     task.putobjsense(mosek.objsense.maximize);
+                    task.writedata("c:/out/mosek_task_dump.opf");
                     task.optimize();
                     // Print a summary containing information
                     //   about the solution for debugging purposes

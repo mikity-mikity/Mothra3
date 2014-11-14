@@ -289,10 +289,8 @@ namespace mikity.ghComponents
         {
             pManager.AddSurfaceParameter("listSurface", "lstSrf", "list of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddCurveParameter("listCurve", "lstCrv", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
-            pManager.AddPointParameter("listPoint", "lstPnt", "list of curves", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddTextParameter("listType", "lstSrfType", "list of types of surfaces", Grasshopper.Kernel.GH_ParamAccess.list);
             pManager.AddTextParameter("listType", "lstCrvType", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
-            pManager.AddTextParameter("listHeight", "lstPntHeight", "list of types of edge curves", Grasshopper.Kernel.GH_ParamAccess.list);
         }
         protected override void RegisterOutputParams(Grasshopper.Kernel.GH_Component.GH_OutputParamManager pManager)
         {
@@ -506,7 +504,7 @@ namespace mikity.ghComponents
                 }
             }
             //call mosek
-            mosek1(listLeaf, listBranch, listSlice,listNode, myControlBox.objective);
+            mosek1(listLeaf, listBranch, listSlice,/*listNode, */myControlBox.objective);
             hodgeStar(listLeaf, listBranch, listNode, myControlBox.coeff);
             ready = true;
             this.ExpirePreview(true);
@@ -568,14 +566,11 @@ namespace mikity.ghComponents
             List<string> pntHeights = new List<string>();
             if (!DA.GetDataList(0, _listSrf)) { return; }
             if (!DA.GetDataList(1, _listCrv)) { return; }
-            if (!DA.GetDataList(2, _listPnt)) { return; }
-            if (!DA.GetDataList(3, srfTypes)) { return; }
-            if (!DA.GetDataList(4, crvTypes)) { return; }
-            if (!DA.GetDataList(5, pntHeights)) { return; }
+            if (!DA.GetDataList(2, srfTypes)) { return; }
+            if (!DA.GetDataList(3, crvTypes)) { return; }
 
             if (_listSrf.Count != srfTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for surfaces"); return; }
             if (_listCrv.Count != crvTypes.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need types for curves"); return; }
-            if (_listPnt.Count != pntHeights.Count) { AddRuntimeMessage(Grasshopper.Kernel.GH_RuntimeMessageLevel.Error, "need heights for points"); return; }
 
             listSlice = new Dictionary<string, slice>();
             listSlice2 = new Dictionary<string, slice2>();
@@ -733,7 +728,7 @@ namespace mikity.ghComponents
                     newNode.z = Q.Z;
                 }
             }
-            foreach (var P in _listPnt)
+            /*foreach (var P in _listPnt)
             {
                 foreach (var node in listNode)
                 {
@@ -745,7 +740,7 @@ namespace mikity.ghComponents
                         node.airyHeight = height;
                     }
                 }
-            }
+            }*/
             for(int i=0;i<_listSrf.Count;i++)
             {
                 var srf = _listSrf[i];
