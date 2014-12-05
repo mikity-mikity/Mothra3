@@ -664,8 +664,8 @@ namespace mikity.ghComponents
             {
                 leaf.varOffset = numvar;
                 leaf.conOffset = numcon;
-                numvar += (leaf.nU * leaf.nV) + leaf.r * 4;  //z,H11,H22,H12,trace
-                numcon += leaf.r * 4 ;// H11,H22,H12,trace
+                numvar += (leaf.nU * leaf.nV) + leaf.r * 3;  //z,H11,H22,H12
+                numcon += leaf.r * 3;// H11,H22,H12
             }
 
             foreach (var branch in _listBranch)
@@ -730,7 +730,7 @@ namespace mikity.ghComponents
                 {
                     for (int i = 0; i < leaf.r; i++)
                     {
-                        int n = i * 4 + (leaf.nU * leaf.nV);
+                        int n = i * 3 + (leaf.nU * leaf.nV);
                         bkx[n + leaf.varOffset] = mosek.boundkey.fr;
                         blx[n + leaf.varOffset] = -infinity;
                         bux[n + leaf.varOffset] = infinity;
@@ -955,19 +955,16 @@ namespace mikity.ghComponents
                         //define H11,H12,H22
                         for (int i = 0; i < leaf.r; i++)
                         {
-                            int N11 = i * 4; //condition number
-                            int N22 = i * 4 + 1;
-                            int N12 = i * 4 + 2;
-                            int Ntrace = i * 4 + 3;
-                            int target = i * 4 + (leaf.nU * leaf.nV) + leaf.varOffset;   //variable number
+                            int N11 = i * 3; //condition number
+                            int N22 = i * 3 + 1;
+                            int N12 = i * 3 + 2;
+                            int target = i * 3 + (leaf.nU * leaf.nV) + leaf.varOffset;   //variable number
                             task.putaij(N11+leaf.conOffset, target, -1);
                             task.putconbound(N11 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
                             task.putaij(N22 + leaf.conOffset, target + 1, -1);
                             task.putconbound(N22 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
                             task.putaij(N12 + leaf.conOffset, target + 2, -1);
                             task.putconbound(N12 + leaf.conOffset, mosek.boundkey.fx, 0, 0);
-                            task.putaij(Ntrace + leaf.conOffset, target + 3, -1);
-                            task.putconbound(Ntrace + leaf.conOffset, mosek.boundkey.fx, 0, 0);
                             //N11
                             leaf.tuples[i].d2[0, 0].CopyTo(grad, 0);
                             leaf.tuples[i].d0.CopyTo(grad0, 0);
@@ -1012,18 +1009,15 @@ namespace mikity.ghComponents
                                 double val = 0;
                                 val += grad[k];
                                 task.putaij(N12 + leaf.conOffset, leaf.tuples[i].internalIndex[k] + leaf.varOffset, -val);
-                            }
-                            task.putaij(Ntrace + leaf.conOffset, target, 1);
-                            task.putaij(Ntrace + leaf.conOffset, target + 1, 1);
-                            
+                            }                            
                         }
                         //if (leaf.leafType == leaf.type.convex)
                         {
                             for (int i = 0; i < leaf.r; i++)
                             {
-                                int N11 = i * 4 + (leaf.nU * leaf.nV); //variable number
-                                int N22 = i * 4 + 1 + (leaf.nU * leaf.nV);
-                                int N12 = i * 4 + 2 + (leaf.nU * leaf.nV);
+                                int N11 = i * 3 + (leaf.nU * leaf.nV); //variable number
+                                int N22 = i * 3 + 1 + (leaf.nU * leaf.nV);
+                                int N12 = i * 3 + 2 + (leaf.nU * leaf.nV);
 
                                 csub[0] = N11 + leaf.varOffset;
                                 csub[1] = N22 + leaf.varOffset;
